@@ -11,6 +11,8 @@ import { Screen } from './js/game/screen.js';
 import { W, H } from './js/game/mapdata.js';
 import { LabEngine, paint, drawRuns, bbox, measureTimings, DIRS, NAMES, INDEX, sheetName, WALK_MS } from './engine.mjs';
 import { AnimationTrace, playerSheet } from './animation-trace.mjs';
+import { attachLocalHd } from './hd-local.mjs';
+import { HD_STATE } from './js/game/fb565.js';
 const $=id=>document.getElementById(id);
 const state={view:'lab',action:'st',dir:0,speed:4,context:'round',warp:'entry',mount:0,playing:true,ready:false,epoch:0,diagnostics:[],errors:[]};
 const library=new Map();let selected,reference,engine,refEngine,louie,match,training,report,last=0,acc=0,repeatAt=0,seenFrame='';
@@ -23,6 +25,14 @@ function showAnimation(scope,file){
 async function ensureResources(){if(!resources)resources=Promise.all([loadAssets(),louieSets()]).then(([,l])=>{louie=l;}).catch(e=>{resources=null;throw e;});return resources;}
 function enableSubject(yes){for(const el of document.querySelectorAll('#view-lab button, #view-lab select, #view-lab input, #view-seams select, #view-training button, #reload, #export-report, #character, #reference, #compare'))el.disabled=!yes;}
 function status(s){$('status').textContent=s;}
+function syncHd(){
+ const entry=selected;
+ if(entry&&!entry.native)attachLocalHd(entry,NAMES,{enabled:$('enable-hd').checked,onError:(name,e)=>{const warning={level:'warning',file:'hd/'+name,text:'HD: imagem não decodificou; usando GRA nativo. '+e.message};entry.report.issues.push(warning);state.diagnostics.push({type:'hd-fallback',sheet:name+'.gra',reason:e.message});if(selected===entry){renderValidation();syncHd();}}});
+ const count=[...(selected?.hdSheets?.values()||[])].filter(s=>!s.bad).length;$('enable-hd').disabled=!count;
+ const text=!count?(entry?.report.hd?.present?'HD indisponível/inválido · GRA nativo':'Sem pacote HD · GRA nativo'):!$('enable-hd').checked?'HD desligado · GRA nativo':HD_STATE.slow?'HD desativado pelo controle de desempenho original':match?.screen&&!match.screen.gl?'WebGL indisponível · GRA nativo':`HD local · ${selected.report.hd.scale}× · ${count}/35 folhas`;
+ const list=match?.screen?.hdList||[],visible=list.length,atlases=[...new Set(list.map(b=>b.r.hd?.file).filter(Boolean))].join(', '),detail=text+(count&&$('enable-hd').checked?` · ${visible} em uso na tela${atlases?' · '+atlases:''}`:'');
+ if($('hd-status').textContent!==detail)$('hd-status').textContent=detail;
+}
 function error(e){const s=e?.message||String(e);state.errors.push(s);status('Falha: '+s);console.error(e);postResults();}
 window.addEventListener('error',e=>error(e.error||e.message));window.addEventListener('unhandledrejection',e=>error(e.reason));
 function register(entry){
@@ -31,6 +41,7 @@ function register(entry){
 function options(){return {action:state.action,dir:state.dir,speed:state.speed,context:state.context,warp:state.warp,mount:state.mount};}
 async function loadEntry(entry,force=false){
  if(entry.set&&!force)return entry;
+ if(force&&entry.hdSheets){for(const s of entry.hdSheets.values()){s.bad=true;s.bytes=s.pixels=null;}entry.hdSheets=null;}
  if(entry.native){entry.set=await characterSet(entry.look);entry.report=nativeReport(entry);}
  else{
   const map=entry.report.sheets;
@@ -46,6 +57,7 @@ function nativeReport(entry){const sheets={};NAMES.forEach((n,i)=>{const r=entry
 async function selectCharacter(id,force=false){
  const token=++state.epoch;stopTraining();status('Carregando personagem…');const entry=library.get(id);if(!entry)throw Error('Personagem desconhecido');await ensureResources();await loadEntry(entry,force);if(token!==state.epoch)return;
  selected=entry;report=entry.report;for(const trace of Object.values(animationTraces))trace.reset();$('subject-name').textContent=entry.name;$('pack-info').textContent=`${report.files}/37 folhas · ${report.frames} quadros${entry.native?' · oficial':' · projeto / importação local'}`;
+ syncHd();
  enableSubject(true);$('start-training').disabled=!report.valid;$('empty-state').hidden=true;$('sprite').hidden=false;
  if(match?.world?.me){match.world.me.set=entry.set;match.world.me.look=entry.look;}
  resetLab();renderValidation();drawSeam();status(report.valid?'Pronto. Ritmo e renderização do cliente original.':'Há erros no pacote. Inspeção disponível; corrija os arquivos antes do treino.');
@@ -99,6 +111,7 @@ function frame(now){
   }else{last=now;acc=0;}draw();
  }else if(state.view==='seams'&&$('seam-mode').value==='alternate')drawSeam(now);
  if(match?.world?.me&&state.view==='training'){
+   syncHd();
    const p=match.world.me;$('training-status').textContent=`${selected.name} · cena${match.scene} · estado${p.state} · direção${DIRS[p.dir]} · quadro${p.frame} · velocidade${p.speedLvl} · ${p.hasMount?'Louie'+p.mount:'sem montaria'} · tile${p.tx},${p.ty} · bombas${match.world.bombs.length}`;
    showAnimation('training',playerSheet(p));
  }
@@ -199,6 +212,7 @@ async function browserSelfTest(){
 function bind(){
  $('fullscreen-arena').onclick=async()=>{try{if(!document.fullscreenElement)await $('play-surface').requestFullscreen();else await document.exitFullscreen();}catch{status('Tela cheia indisponível neste navegador.');}};
  $('render-filter').onchange=()=>{changeTrainingFilter();if(match)$('game-canvas').focus();};$('fluid-motion').onchange=()=>{display.smooth=$('fluid-motion').checked;if(match)$('game-canvas').focus();};
+ $('enable-hd').onchange=()=>{syncHd();if(match)$('game-canvas').focus();};
  document.addEventListener('fullscreenchange',()=>requestAnimationFrame(fitTrainingCanvas));
  new ResizeObserver(fitTrainingCanvas).observe($('arena'));
  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.dir=+b.dataset.dir;resetLab();});

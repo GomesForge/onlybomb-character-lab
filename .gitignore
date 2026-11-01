@@ -14,3 +14,8 @@ dist/
 .test-data/
 
 GUIA_INDICE_ACOMPANHA.jpg
+
+GUIA_INDICE_PUBLICADO.jpg
+resultado_hd_fallback.json
+
+resultado_hd_navegador.json

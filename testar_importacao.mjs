@@ -20,7 +20,7 @@ const corrupt=zip([fixtures[0]],0);corrupt[30+fixtures[0][0].length+10]^=1;await
 await assert.rejects(unzip(zip([fixtures[0]]).slice(0,-1)),/ZIP/);
 await assert.rejects(unzip(zip([fixtures[0],['x/mo_s.gra',fixtures[0][1]]])),/duplicado/);
 const malformed=gra();new DataView(malformed.buffer).setUint16(19+4*3,256,true);await assert.rejects(inspectGra('st_s',malformed),/fora da tela/);
-await assert.rejects(importPack([{name:'bad.zip',size:45_000_001}]),/45 MB/);
+await assert.rejects(importPack([{name:'bad.zip',size:128_000_001}]),/128 MB/);
 const imported=await importPack(fixtures.map(([name,b])=>({name,size:b.length,arrayBuffer:async()=>b.slice().buffer})));assert.equal(imported.report.valid,true);assert.equal(imported.name,'Teste local');
 const raw=zip(fixtures),p=await importPack([{name:'pack.zip',size:raw.length,arrayBuffer:async()=>raw.buffer}]);assert.equal(p.report.frames,250);
 // Verify decoder graph is preserved on every supported platform, without requiring the private backup.

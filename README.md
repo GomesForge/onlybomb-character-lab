@@ -56,3 +56,12 @@ Para conferir o relógio de outro pacote local, `node --experimental-vm-modules 
 
 
 Atualização de interface: nomes exatos da animação anterior/atual em destaque, inclusive por teclado. Modo de expansão artificial removido; Tela cheia nativa permanece opcional. O índice do guia acompanha a seção atual. Texto e108anexos permanecem intactos: build verifica o SHA original após remover somente a tag da melhoria de navegação autorizada.
+
+
+### Personagens HD do backup
+
+Importe as37folhasGRA e character.json junto de uma pasta hd/ com hd.json e os atlas <folha>.png ou <folha>.webp. Também pode selecionar os arquivos juntos. O contrato é o do backup: format, scale, grey_bit, sheets com frames/box/size/rects; a grade PNG antiga com cols também funciona. Os35slots de partida podem ter HD; preview/face continuam nativos, como o cliente original.
+
+HD no treino usa hdPixels, HD_SHEETS e o shader/oclusão/desempenho do Screen original, sem modificar os58módulos ou os relógios. A inspeção de GRA e seus limites permanece nativa. Desmarque HD no treino para comparar. O contador informa quantas folhas estão efetivamente sendo usadas pelo passe HD. Arquivo ausente, contagem divergente, retângulo inválido ou imagem que falha ao decodificar retorna ao GRA daquela folha, com aviso. Sem WebGL ou quando o controle original detecta aparelho lento, o GRA também permanece.
+
+Importação exclusivamente local, sem envio. Limites:32MB por arquivo,128MB porZIP,256MB descompactados,1000entradas. Testes: testar_hd.mjs, testar_importacao.mjs, testar_motor.cjs e navegador com PNG antigo/WebP/HDdesligado/atlas corrompido. Fixtures técnicas em .test-data não são arte de personagem nem publicadas no site.
