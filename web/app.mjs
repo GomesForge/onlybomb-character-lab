@@ -131,7 +131,7 @@ function changeTrainingFilter(){
 }
 async function startTraining(){
  if(!selected||!report.valid)return;stopTraining();status('Carregando arena do cliente original…');
- expandArena(true);
+ expandArena(false);
  display.sideArt=false;display.lite=false;display.smooth=$('fluid-motion').checked;display.filter=$('render-filter').value;settings.bgm=settings.sfx=$('audio').checked;
  const s={myId:1,users:new Map([[1,{nick:'TesteLocal',cls:0}]]),outfit:{wearing:false,look:selected.look},wallet:{bomb:0},belts:[],beltOf:()=>0,superBroadcast:null};
  training=new Training(s,{map:+$('map').value,bots:+$('bots').value,blocks:$('blocks').checked,full:true,items:8191});
