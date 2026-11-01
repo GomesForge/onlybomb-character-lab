@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+resultado_*.json
+VALIDACAO_REALIZADA.json
+SIMULADOR*.jpg
+SIMULADOR*.png
+.env*
+*.log
+dist/
+.DS_Store
+.openai/
+.codex/
+*.zip
+.test-data/

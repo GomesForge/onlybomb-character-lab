@@ -1,0 +1,238 @@
+{
+  "source": "38_BACKUP_SERVIDOR_2026-10-31/02_JOGO_CODIGO_FONTE/js",
+  "unchanged": true,
+  "files": [
+    {
+      "file": "account.js",
+      "sha256": "b3bed111a54a9133b4ad4f387f28d836ce58ac2743509324cdeb2c68fa1e4e7c"
+    },
+    {
+      "file": "ask.js",
+      "sha256": "e79efc2b8d51e20b7a968e6f5cfb1e93ff30c43f17a1e460685750d04eafa70e"
+    },
+    {
+      "file": "assets/spr.js",
+      "sha256": "ca247eeb4df093ea557e963aa2dee3953e2dd8f2bce882cfd5312dbb51de460c"
+    },
+    {
+      "file": "cash.js",
+      "sha256": "a05c3bb95465a80271ffaae6c36be28c0e5dee4e32c36e55d6bfc206ebfcd59a"
+    },
+    {
+      "file": "clicks.js",
+      "sha256": "6af3e0a2b076a1aa008d29af0b69349cbe7a6d9704c4761c1bba79172f801f7f"
+    },
+    {
+      "file": "country.js",
+      "sha256": "fee54ded552fa4d2881d0dd8349015494af84fba250cc6e6b814463df4913763"
+    },
+    {
+      "file": "devtools.js",
+      "sha256": "984d28f139e2ba0d3d7448c9c868df456eda5e0299c659014834c7f8728414d8"
+    },
+    {
+      "file": "game/arenabg.js",
+      "sha256": "3443e00cc67fd3e3dd11fbaedbf29d022a340bdd0b9f5fa7f81c5791a664e73a"
+    },
+    {
+      "file": "game/assets.js",
+      "sha256": "49a4930ffc89c0cc360afa492833655a41eba3966906ad7ee27b854e3699777a"
+    },
+    {
+      "file": "game/audio.js",
+      "sha256": "a713c227c4a8c93b33ae05e5d510a1ad5d13102105e9d69d4e20668da29fe9a4"
+    },
+    {
+      "file": "game/avatar3d.js",
+      "sha256": "a80ae4e26ecc801fd1e8b153d57eb65fd6456cadf2220e9a04951a751efba658"
+    },
+    {
+      "file": "game/avatar_worker.js",
+      "sha256": "eb11df060d87e9ae879f956c12fc82c3adebc88e44d90400b100e360f748b90c"
+    },
+    {
+      "file": "game/bombskins.js",
+      "sha256": "013945b5d90fadc9216219cb177a8f2fd9806d1d635dd596f4a3d5887b3b6f52"
+    },
+    {
+      "file": "game/boss.js",
+      "sha256": "8f3da9a5cfe8255a4b6e95b35cd2f8156b91bf8f5b4fd52d646fa2fca1f93a4e"
+    },
+    {
+      "file": "game/bossitems.js",
+      "sha256": "9f7b3ca9c97f7503e1f87f297aa0dc056a730ab9edca9612061f0c246de97481"
+    },
+    {
+      "file": "game/bot.js",
+      "sha256": "8417cd73ad3692d2227ba0015751041bfcde6cfa8b9c49cb57b02a0ccfbd0502"
+    },
+    {
+      "file": "game/characters.js",
+      "sha256": "3e0a943bb0e41f41a84028ec874f64a5b4f42106fe940c19cc8800afced6ba82"
+    },
+    {
+      "file": "game/controls.js",
+      "sha256": "3f0513fc634928f273a9549cd43cad48d0e5015e46aefba08c3439f7bcd0fd37"
+    },
+    {
+      "file": "game/display.js",
+      "sha256": "789039d38e52ffa36779fb9e92cea73cc23d8040eca7a3eda8973a6e2a7a21bb"
+    },
+    {
+      "file": "game/dropstage.js",
+      "sha256": "0aed6716c32bacfd8bc7377174c859d67a0ddd7b133fceb82c49bb2dd3fc00e0"
+    },
+    {
+      "file": "game/fb565.js",
+      "sha256": "2df622047ce33b9c4cc6af9bf830617609189a0dd9ac5bd37c5138beb65aae53"
+    },
+    {
+      "file": "game/fpsmeter.js",
+      "sha256": "026de2dbc41974ff90d2aae78d1bfc3e76c85d842cc1a6b90669a8745257183b"
+    },
+    {
+      "file": "game/gimmicks.js",
+      "sha256": "2054264f452892a780f8861ad3b27de86cc428fc2a18932a522c84c1a0cb1d53"
+    },
+    {
+      "file": "game/hd_worker.js",
+      "sha256": "eb33e61ff5e830534eb819cbdf265ee76384ae96cb1bab8d982cf1fe65922393"
+    },
+    {
+      "file": "game/hdpixels.js",
+      "sha256": "a8d2b103e29638fd8d3d97211fdf13f9bf016538fc543403513d83ce050a579e"
+    },
+    {
+      "file": "game/hud.js",
+      "sha256": "281b19d057b2495086b93fd1d9893d657533092d1d217cf80cbdf70c425ccf97"
+    },
+    {
+      "file": "game/hyper.js",
+      "sha256": "fed6275ecbfa82e13aa6f1236bacad40a3f6ea15e87cc81c6548be301cadd4ac"
+    },
+    {
+      "file": "game/input.js",
+      "sha256": "f560fe1a86c7fecbf436055046fddb32affe3f75ebf0ab222f67b5a0aaca9a4c"
+    },
+    {
+      "file": "game/mapdata.js",
+      "sha256": "e24906c00ad2cdee1b19d1d8328dd05ae7c142ab8a7ca27388cab25d34ff26e0"
+    },
+    {
+      "file": "game/match.js",
+      "sha256": "559d8bd2ccac8b14aab2114ff38d1a087830449fd0afb62dc392d2f6373e0b81"
+    },
+    {
+      "file": "game/missionicon.js",
+      "sha256": "1e201a49df8ac43a4904cfd5fee72cd08c2f57282b665f23bf48aead96f1435f"
+    },
+    {
+      "file": "game/objects.js",
+      "sha256": "47087595b1b41ab8c6d799f4c3c737640255a158c0e361da92ffcc83cd840423"
+    },
+    {
+      "file": "game/outfits.js",
+      "sha256": "89afb9e827a8db5eb84f6ba41698dc64b0002fab345e1bf6c2444eb34a5d309d"
+    },
+    {
+      "file": "game/panel.js",
+      "sha256": "0856e3a6b0851b5dbe85306f0203c87012a5dcf42486be203bff6264f4480df6"
+    },
+    {
+      "file": "game/player.js",
+      "sha256": "403fd5f67d3c5b7e3b745eb5ac3dbecd8c51ba95060cc7d9e7af7dcc4836e354"
+    },
+    {
+      "file": "game/render.js",
+      "sha256": "f8891a7ddd39c07d1dac05b9fad82cb5f204c0107d9b15ad58145327d3c3e421"
+    },
+    {
+      "file": "game/scenes.js",
+      "sha256": "0db6c10d45c9d005922fb8b7939f53a86ca2aa2aed35ae81bd2fa830473afc77"
+    },
+    {
+      "file": "game/scramble.js",
+      "sha256": "b99e08ce79ec41f47d1cd348722de1f4afc7a121338c8b9326036c856976c33e"
+    },
+    {
+      "file": "game/screen.js",
+      "sha256": "24ebc1f971a0fce464e176f39cf9b4a5fa619ce7cf03775d10799a4af0ffb368"
+    },
+    {
+      "file": "game/sideart.js",
+      "sha256": "0657a935b329089e617ef8cd191bdc29268ded3fe0210e8773adfe11ce987fe9"
+    },
+    {
+      "file": "game/smooth.js",
+      "sha256": "55d3ca22d73b2f16a29629f6999952bebd54b1c6362c5dae8ae256a29176e738"
+    },
+    {
+      "file": "game/sound.js",
+      "sha256": "c0e1435a017fb0d8c7219d5874c807d967ca00cddaa8dc379269b0ef68975548"
+    },
+    {
+      "file": "game/ticker.js",
+      "sha256": "189981896b8f310a8454c3f85924e8ebc991c7798a0bbcc5e574d0e4545c7289"
+    },
+    {
+      "file": "game/touch.js",
+      "sha256": "f2b46f389c72c5c31cbdd1a486bd51442d273bf6862065d304fede4095baaf28"
+    },
+    {
+      "file": "game/training.js",
+      "sha256": "52637c8b292c18dd654785c18e06f6e77fbd37a51c40491100ece1b2a22e09cc"
+    },
+    {
+      "file": "game/world.js",
+      "sha256": "8f0856c1220fefaa8269f6a83305b129eb61dd3e702c6308a2edb18a559ac21b"
+    },
+    {
+      "file": "guild.js",
+      "sha256": "a88bbf1f15096709ea62955e62c3bfab155cdab86e54737ddf8e52601546858f"
+    },
+    {
+      "file": "i18n.js",
+      "sha256": "cb512af522317d087c33055eb15639248966124d0b61643992236a46038a199e"
+    },
+    {
+      "file": "install.js",
+      "sha256": "f34e0d5faf71dd87d2b32086baf2be6d713f17b03ac429513440bc7eae4ff32b"
+    },
+    {
+      "file": "main.js",
+      "sha256": "5d9fbfdeaa81186541126af53037d5e8d83ebe6f43b0b110b208b43295802961"
+    },
+    {
+      "file": "net/codec.js",
+      "sha256": "bf89ef145dc26930015a4ccffacd18927fe4a763570e709c0de784f7a56fb06d"
+    },
+    {
+      "file": "net/conn.js",
+      "sha256": "5c491a199461d645ddc832c297f23666928aa66913040b74687307b0432c52c3"
+    },
+    {
+      "file": "options.js",
+      "sha256": "5ad5b566f6bed8c499e5f598edabb78076b5b7fe1062ede98aee636c61071349"
+    },
+    {
+      "file": "ranking.js",
+      "sha256": "54881fe82843a09ebf6b6f08653824b1a625f0b9bde1ab7c815bd0b241ac5419"
+    },
+    {
+      "file": "rejoin.js",
+      "sha256": "4be40349ae88a9b81fc2339acda939bc9f1fb4f554ce6a164550dba2ba338f95"
+    },
+    {
+      "file": "report.js",
+      "sha256": "0479f0c7d85601b90022c69a96b22718de040b06745566f6039b9437990567a1"
+    },
+    {
+      "file": "session.js",
+      "sha256": "e9e8410e4ebfdc22bf8159197f5d53983d4c5a92a4a82b16c5829684948165b2"
+    },
+    {
+      "file": "superbroadcast.js",
+      "sha256": "46281337b1d3dab16ca137e3927897c80889be9613b4760cf1d67a5c2e5931a2"
+    }
+  ]
+}
