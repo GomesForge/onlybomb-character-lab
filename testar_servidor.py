@@ -15,10 +15,14 @@ class ValidationTests(unittest.TestCase):
     def test_integral_guide_hash_and_fullscreen_controls(self):
         import hashlib
         origin=json.loads((P/'ORIGEM_GUIA.json').read_text(encoding='utf8'))
-        self.assertEqual(hashlib.sha256((P/'web'/origin['file']).read_bytes()).hexdigest(),origin['sha256'])
+        from guia_apresentacao import verify
+        self.assertEqual(hashlib.sha256(verify(P/'web'/origin['file'])).hexdigest(),origin['sha256'])
         page=(P/'web/index.html').read_text(encoding='utf8')
         surface=page.split('<section id="play-surface">')[1].split('</section>')[0]
         self.assertLess(surface.index('test-actions'),surface.index('id="arena"'))
+        self.assertLess(surface.index('training-current-file'),surface.index('id="arena"'))
+        self.assertNotIn('expand-arena',page)
+        self.assertIn('lab-previous-file',page)
         self.assertIn('href="./guia/"',page)
     def test_gra_and_corruption(self):
         self.assertEqual(server.inspect_gra('st_s',gra())['frames'],3)

@@ -12,6 +12,16 @@ async function main(){
  const louie=Array.from({length:4},()=>L);
  const project=process.argv[2]?path.resolve(process.argv[2]):path.join(__dirname,'../Personagens Customizados/MADARA_BOMBER/entrega/madara-bomber');
  const set=E.NAMES.map(n=>runs(path.join(project,n+'.gra'))),checks=[];
+ const traceModule=moduleFor(path.join(root,'animation-trace.mjs'));await traceModule.link(()=>{throw Error('Unexpected import');});await traceModule.evaluate();
+ const {playerSheet,AnimationTrace}=traceModule.namespace;
+ const history=new AnimationTrace();history.observe('st_s.gra');history.observe('mo_n.gra');history.observe('mo_n.gra');assert.equal(history.previous,'st_s.gra');assert.equal(history.current,'mo_n.gra');
+ // Check reported filenames against the actual original drawing method, including mounts/blinking/cart.
+ for(let dir=0;dir<4;dir++)for(let state=0;state<=8;state++)for(const mode of ['body','mount','dismount','revive','cart']){
+  const p=new E.LabEngine(set,louie).p;p.dir=dir;p.state=state;p.hasMount=mode==='mount';p.inCart=mode==='cart';p.cartSide=dir;p.dismountBlink=mode==='dismount'?1:0;p.reviveBlink=mode==='revive'?1:0;p.drawOverlay=()=>{};p.world.hyper=null;p.team=-1;
+  const shown=[],fb={opaque(r){if(set.includes(r))shown.push(E.NAMES[set.indexOf(r)]+'.gra');},white(r){if(set.includes(r))shown.push(E.NAMES[set.indexOf(r)]+'.gra');},half(){},text(){}};
+  if(p.inCart){p.drawCart(fb);}else if(state!==8)p.drawBody(fb);
+  assert.equal(playerSheet(p),shown[0]||null,JSON.stringify({dir,state,mode}));
+ }
  function cycle(action,limit=4000,opts={}){const e=new E.LabEngine(set,louie,{action,...opts});let saw=false;for(let t=0;t<limit;t+=20){e.step();if(e.p.frame!==0)saw=true;if(e.done)return e;if(saw&&e.p.frame===0&&['st','mo','pa','wi'].includes(action))return e;}return e;}
  const count=n=>set[E.INDEX[n]].n,quantize=ms=>Math.ceil(ms/20)*20;
  for(const [a,ms]of [['st',480],['mo',480],['pa',count('pa_s')*50],['th',(count('th_s')+1)*60],['pu',quantize((count('pu_s')+1)*70)],['dd',quantize((count('dd')+1)*70)],['wa',count('wa')*40]]){const e=cycle(a);assert.equal(e.ms,ms,a);checks.push({action:a,ms:e.ms});}

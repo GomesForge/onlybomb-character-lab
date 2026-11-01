@@ -10,10 +10,16 @@ import { display } from './js/game/display.js';
 import { Screen } from './js/game/screen.js';
 import { W, H } from './js/game/mapdata.js';
 import { LabEngine, paint, drawRuns, bbox, measureTimings, DIRS, NAMES, INDEX, sheetName, WALK_MS } from './engine.mjs';
+import { AnimationTrace, playerSheet } from './animation-trace.mjs';
 const $=id=>document.getElementById(id);
 const state={view:'lab',action:'st',dir:0,speed:4,context:'round',warp:'entry',mount:0,playing:true,ready:false,epoch:0,diagnostics:[],errors:[]};
 const library=new Map();let selected,reference,engine,refEngine,louie,match,training,report,last=0,acc=0,repeatAt=0,seenFrame='';
 let resources;const empty=new Runs([new Int32Array()],new Uint16Array(),256,256);
+const animationTraces={lab:new AnimationTrace(),training:new AnimationTrace()};
+function showAnimation(scope,file){
+ const trace=animationTraces[scope];if(!trace.observe(file))return;
+ $(scope+'-previous-file').textContent=trace.previous||'—';$(scope+'-current-file').textContent=trace.current||'Nenhum arquivo em exibição';
+}
 async function ensureResources(){if(!resources)resources=Promise.all([loadAssets(),louieSets()]).then(([,l])=>{louie=l;}).catch(e=>{resources=null;throw e;});return resources;}
 function enableSubject(yes){for(const el of document.querySelectorAll('#view-lab button, #view-lab select, #view-lab input, #view-seams select, #view-training button, #reload, #export-report, #character, #reference, #compare'))el.disabled=!yes;}
 function status(s){$('status').textContent=s;}
@@ -39,7 +45,7 @@ async function loadEntry(entry,force=false){
 function nativeReport(entry){const sheets={};NAMES.forEach((n,i)=>{const r=entry.set[i];sheets[n]={file:n+'.gra',frames:r.n,w:r.w,h:r.h,boxes:Array.from({length:r.n},(_,f)=>bbox(r,f)),issues:[]};});return {sheets,issues:[],files:37,frames:entry.set.reduce((s,r)=>s+r.n,0),valid:true,native:true,note:'Referência nativa carregada pelo decodificador/tinta originais.'};}
 async function selectCharacter(id,force=false){
  const token=++state.epoch;stopTraining();status('Carregando personagem…');const entry=library.get(id);if(!entry)throw Error('Personagem desconhecido');await ensureResources();await loadEntry(entry,force);if(token!==state.epoch)return;
- selected=entry;report=entry.report;$('subject-name').textContent=entry.name;$('pack-info').textContent=`${report.files}/37 folhas · ${report.frames} quadros${entry.native?' · oficial':' · projeto / importação local'}`;
+ selected=entry;report=entry.report;for(const trace of Object.values(animationTraces))trace.reset();$('subject-name').textContent=entry.name;$('pack-info').textContent=`${report.files}/37 folhas · ${report.frames} quadros${entry.native?' · oficial':' · projeto / importação local'}`;
  enableSubject(true);$('start-training').disabled=!report.valid;$('empty-state').hidden=true;$('sprite').hidden=false;
  if(match?.world?.me){match.world.me.set=entry.set;match.world.me.look=entry.look;}
  resetLab();renderValidation();drawSeam();status(report.valid?'Pronto. Ritmo e renderização do cliente original.':'Há erros no pacote. Inspeção disponível; corrija os arquivos antes do treino.');
@@ -76,6 +82,7 @@ function seek(f){state.playing=false;$('play').textContent='Reproduzir';engine.s
 function draw(){
  if(!engine)return;const opts={effects:$('effects').checked,guides:$('guides').checked,safeArea:$('safe-area').checked,zoom:+$('zoom').value};paint(engine,$('sprite'),opts);
  const c=engine.current(),r=selected.set[INDEX[c.name]],box=bbox(r,c.frame);$('frame-info').textContent=`${c.name}.gra · quadro${c.frame}/${r.n-1} · ${engine.ms}ms${engine.done?' · ação concluída':''}\ncaixa: ${box?.join(', ')||'vazio'}${box?' · '+(box[2]-box[0])+'×'+(box[3]-box[1])+'px':''}`;
+ showAnimation('lab',c.name+'.gra');
  $('scrub-label').value=`${engine.p.frame} / ${engine.frames()-1}`;
  if(state.playing)$('scrub').value=Math.min(engine.frames()-1,engine.p.frame);
  $('reference-stage').hidden=!$('compare').checked;
@@ -93,6 +100,7 @@ function frame(now){
  }else if(state.view==='seams'&&$('seam-mode').value==='alternate')drawSeam(now);
  if(match?.world?.me&&state.view==='training'){
    const p=match.world.me;$('training-status').textContent=`${selected.name} · cena${match.scene} · estado${p.state} · direção${DIRS[p.dir]} · quadro${p.frame} · velocidade${p.speedLvl} · ${p.hasMount?'Louie'+p.mount:'sem montaria'} · tile${p.tx},${p.ty} · bombas${match.world.bombs.length}`;
+   showAnimation('training',playerSheet(p));
  }
 }
 document.addEventListener('visibilitychange',()=>{last=0;acc=0;});
@@ -111,7 +119,7 @@ function drawSeam(now=0){
  $('seam-info').textContent=`${l.n}[${l.f}] · caixa${bbox(l.run,l.f)?.join(', ')} → ${r.n}[${r.f}] · caixa${bbox(r.run,r.f)?.join(', ')}${mode==='alternate'?' · alternância lenta só para inspeção':''}`;
 }
 function setView(view){
- if(state.view==='training'&&view!=='training'){expandArena(false);stopTraining();}state.view=view;last=0;acc=0;document.body.classList.toggle('training-view',view==='training');
+ if(state.view==='training'&&view!=='training')stopTraining();state.view=view;last=0;acc=0;document.body.classList.toggle('training-view',view==='training');
  document.querySelectorAll('.view').forEach(e=>e.hidden=e.id!=='view-'+view);document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
  if(view==='seams')drawSeam();if(view==='lab')draw();if(view==='training')requestAnimationFrame(fitTrainingCanvas);
 }
@@ -122,17 +130,13 @@ function fitTrainingCanvas(){
  canvas.style.width=w+'px';canvas.style.height=h+'px';
  $('render-info').textContent=`800×600 nativo · ${w}×${h} na tela`;
 }
-function expandArena(on){
- if(!on&&document.fullscreenElement===$('play-surface'))document.exitFullscreen().catch(()=>{});
- $('play-surface').classList.toggle('expanded',on);document.body.classList.toggle('arena-expanded',on);$('expand-arena').textContent=on?'Voltar ao laboratório':'Ampliar arena';$('expand-arena').setAttribute('aria-pressed',String(on));requestAnimationFrame(fitTrainingCanvas);if(match)$('game-canvas').focus();
-}
 function changeTrainingFilter(){
  display.filter=$('render-filter').value;
  if(match?.loaded){match.screen.dispose();match.screen=new Screen(match.canvas);match.sizeScreen();match.fitFrame();fitTrainingCanvas();}
 }
 async function startTraining(){
  if(!selected||!report.valid)return;stopTraining();status('Carregando arena do cliente original…');
- expandArena(false);
+ animationTraces.training.reset();$('training-previous-file').textContent=$('training-current-file').textContent='—';
  display.sideArt=false;display.lite=false;display.smooth=$('fluid-motion').checked;display.filter=$('render-filter').value;settings.bgm=settings.sfx=$('audio').checked;
  const s={myId:1,users:new Map([[1,{nick:'TesteLocal',cls:0}]]),outfit:{wearing:false,look:selected.look},wallet:{bomb:0},belts:[],beltOf:()=>0,superBroadcast:null};
  training=new Training(s,{map:+$('map').value,bots:+$('bots').value,blocks:$('blocks').checked,full:true,items:8191});
@@ -142,7 +146,7 @@ async function startTraining(){
   // Observe requests and states without changing their handling or their clocks.
   const send=training.conn.sendGame.bind(training.conn);training.conn.sendGame=raw=>{state.diagnostics.push({type:'training-request',opcode:raw[0],ms:instance.world.clock});send(raw);postResults();};
   const update=instance.update.bind(instance);let lastSample=0;
-  instance.update=dt=>{update(dt);if(instance.world.clock-lastSample>=200){lastSample=instance.world.clock;const p=instance.world.me;state.diagnostics.push({type:'training-sample',ms:lastSample,state:p.state,frame:p.frame,dir:p.dir,tile:[p.tx,p.ty],bombs:instance.world.bombs.length});if(state.diagnostics.length>1500)state.diagnostics.splice(0,1);}};
+  instance.update=dt=>{update(dt);showAnimation('training',playerSheet(instance.world.me));if(instance.world.clock-lastSample>=200){lastSample=instance.world.clock;const p=instance.world.me;state.diagnostics.push({type:'training-sample',ms:lastSample,state:p.state,frame:p.frame,dir:p.dir,sheet:playerSheet(p),tile:[p.tx,p.ty],bombs:instance.world.bombs.length});if(state.diagnostics.length>1500)state.diagnostics.splice(0,1);}};
   const nextRound=instance.nextRound.bind(instance);instance.nextRound=(...args)=>{if(instance.labVictory){instance.labVictory=false;setTimeout(()=>{if(match===instance)diagnostic('reset');},0);return;}nextRound(...args);};
   fitTrainingCanvas();$('game-canvas').focus();status('Treino ativo. Clique na arena e use as setas, espaço e Z.');postResults();}catch(e){if(match===instance)stopTraining();throw e;}
 }
@@ -177,7 +181,7 @@ function diagnostic(kind){
   if(kind==='death'){p.state=5;p.hitReported=true;}
   if(kind==='victory'){p.state=6;p.wonThisRound=1;match.phase=1;match.hud.poseAcc=0;match.hud.poseTotal=0;match.labVictory=true;}
  }
- match.canvas.focus();postResults();
+ showAnimation('training',playerSheet(p));match.canvas.focus();postResults();
 }
 async function importFiles(list){
  if(!list.length)return;status('Lendo e validando arquivos neste navegador…');$('choose-files').disabled=$('choose-folder').disabled=true;
@@ -193,11 +197,9 @@ async function browserSelfTest(){
  state.diagnostics.push({type:'browser-render-and-clock-smoke',character:selected.name,tests,scope:'Every sheet decoded, rendered with originalFB and clock-stepped. Does not prove visual quality or completed gameplay.'});await postResults();
 }
 function bind(){
- $('expand-arena').onclick=()=>expandArena(!$('play-surface').classList.contains('expanded'));
- $('fullscreen-arena').onclick=async()=>{expandArena(true);try{if(!document.fullscreenElement)await $('play-surface').requestFullscreen();else await document.exitFullscreen();}catch{status('Arena ampliada nesta janela. Use F11 no navegador para ocupar a tela inteira.');}};
+ $('fullscreen-arena').onclick=async()=>{try{if(!document.fullscreenElement)await $('play-surface').requestFullscreen();else await document.exitFullscreen();}catch{status('Tela cheia indisponível neste navegador.');}};
  $('render-filter').onchange=()=>{changeTrainingFilter();if(match)$('game-canvas').focus();};$('fluid-motion').onchange=()=>{display.smooth=$('fluid-motion').checked;if(match)$('game-canvas').focus();};
- document.addEventListener('fullscreenchange',()=>{expandArena(!!document.fullscreenElement);});
- window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('play-surface').classList.contains('expanded')){e.preventDefault();e.stopImmediatePropagation();expandArena(false);}},true);
+ document.addEventListener('fullscreenchange',()=>requestAnimationFrame(fitTrainingCanvas));
  new ResizeObserver(fitTrainingCanvas).observe($('arena'));
  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.dir=+b.dataset.dir;resetLab();});
  $('character').onchange=()=>selectCharacter($('character').value).catch(error);$('reference').onchange=()=>selectReference().catch(error);

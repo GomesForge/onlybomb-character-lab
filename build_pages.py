@@ -3,6 +3,7 @@ No dependencies; imported custom characters are deliberately absent from the bui
 """
 from pathlib import Path
 import hashlib, json, re, shutil
+from guia_apresentacao import verify as verify_guide
 ROOT=Path(__file__).resolve().parent
 DIST=ROOT/'dist'
 
@@ -10,7 +11,7 @@ def build():
     DIST.mkdir(exist_ok=True)
     shutil.copytree(ROOT/'web',DIST,dirs_exist_ok=True)
     guide=json.loads((ROOT/'ORIGEM_GUIA.json').read_text(encoding='utf8'))
-    assert hashlib.sha256((DIST/guide['file']).read_bytes()).hexdigest()==guide['sha256'],'Guia integral divergente'
+    verify_guide(DIST/guide['file'])
     data=ROOT/'web/data'
     paths={p.relative_to(data).as_posix().lower():p for p in data.rglob('*') if p.is_file()}
     wanted=set()
