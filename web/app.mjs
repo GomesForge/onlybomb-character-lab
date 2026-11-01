@@ -8,6 +8,7 @@ import { Training } from './js/game/training.js';
 import { settings, stopAll } from './js/game/sound.js';
 import { display } from './js/game/display.js';
 import { Screen } from './js/game/screen.js';
+import { W, H } from './js/game/mapdata.js';
 import { LabEngine, paint, drawRuns, bbox, measureTimings, DIRS, NAMES, INDEX, sheetName, WALK_MS } from './engine.mjs';
 const $=id=>document.getElementById(id);
 const state={view:'lab',action:'st',dir:0,speed:4,context:'round',warp:'entry',mount:0,playing:true,ready:false,epoch:0,diagnostics:[],errors:[]};
@@ -73,7 +74,7 @@ function buildFilmstrip(){
 }
 function seek(f){state.playing=false;$('play').textContent='Reproduzir';engine.seek(f);refEngine?.seek(Math.min(f,refEngine.frames()-1));$('scrub').value=f;draw();}
 function draw(){
- if(!engine)return;const opts={effects:$('effects').checked,guides:$('guides').checked,zoom:+$('zoom').value};paint(engine,$('sprite'),opts);
+ if(!engine)return;const opts={effects:$('effects').checked,guides:$('guides').checked,safeArea:$('safe-area').checked,zoom:+$('zoom').value};paint(engine,$('sprite'),opts);
  const c=engine.current(),r=selected.set[INDEX[c.name]],box=bbox(r,c.frame);$('frame-info').textContent=`${c.name}.gra · quadro${c.frame}/${r.n-1} · ${engine.ms}ms${engine.done?' · ação concluída':''}\ncaixa: ${box?.join(', ')||'vazio'}${box?' · '+(box[2]-box[0])+'×'+(box[3]-box[1])+'px':''}`;
  $('scrub-label').value=`${engine.p.frame} / ${engine.frames()-1}`;
  if(state.playing)$('scrub').value=Math.min(engine.frames()-1,engine.p.frame);
@@ -137,7 +138,7 @@ async function startTraining(){
  training=new Training(s,{map:+$('map').value,bots:+$('bots').value,blocks:$('blocks').checked,full:true,items:8191});
  match=new Match(training.sessionFor(),$('game-canvas'),null);training.onEnd=()=>{stopTraining();status('Treino encerrado.');};
  const instance=match;
- try{await instance.start();if(match!==instance||instance.stopped)return;match.world.me.set=selected.set;state.diagnostics.push({type:'training-start',character:selected.name,map:+$('map').value,bots:+$('bots').value,date:new Date().toISOString()});
+ try{await instance.start();if(match!==instance||instance.stopped)return;match.world.me.set=selected.set;match.world.me.speedLvl=state.speed;state.diagnostics.push({type:'training-start',character:selected.name,map:+$('map').value,bots:+$('bots').value,date:new Date().toISOString()});
   // Observe requests and states without changing their handling or their clocks.
   const send=training.conn.sendGame.bind(training.conn);training.conn.sendGame=raw=>{state.diagnostics.push({type:'training-request',opcode:raw[0],ms:instance.world.clock});send(raw);postResults();};
   const update=instance.update.bind(instance);let lastSample=0;
@@ -145,15 +146,29 @@ async function startTraining(){
   const nextRound=instance.nextRound.bind(instance);instance.nextRound=(...args)=>{if(instance.labVictory){instance.labVictory=false;setTimeout(()=>{if(match===instance)diagnostic('reset');},0);return;}nextRound(...args);};
   fitTrainingCanvas();$('game-canvas').focus();status('Treino ativo. Clique na arena e use as setas, espaço e Z.');postResults();}catch(e){if(match===instance)stopTraining();throw e;}
 }
-function stopTraining(){if(match){match.stop();match=null;training=null;postResults();}$('training-status').textContent='Treino encerrado.';status('Treino encerrado. O laboratório de animações está disponível.');stopAll();}
+let walkTimer,walkInput;
+function stopForcedWalk(){clearTimeout(walkTimer);if(walkInput)for(const a of ['down','left','up','right'])walkInput.let(a,'lab-walk');walkInput=null;}
+function stopTraining(){stopForcedWalk();if(match){match.stop();match=null;training=null;postResults();}$('training-status').textContent='Treino encerrado.';status('Treino encerrado. O laboratório de animações está disponível.');stopAll();}
 function diagnostic(kind){
- if(!match)return status('Inicie o treino primeiro.');const p=match.world.me;
+ if(!match)return status('Inicie o treino primeiro.');stopForcedWalk();const p=match.world.me;const dir=+$('training-dir').value;p.dir=dir;
  state.diagnostics.push({type:'forced-state',action:kind,character:selected.name,date:new Date().toISOString()});
  if(kind==='entry'){match.phase=0;match.hud.resetRound();for(const actor of match.world.players){actor.resetStats(match.mapSet);actor.spawnAt(actor.tx,actor.ty);if(training.full)actor.fullItems();}match.world.roundStart();match.setScene(5);}
  else if(kind==='reset'){p.spawnAt(p.tx,p.ty);p.resetStats(match.mapSet);p.fullItems();match.phase=0;match.setScene(6);match.input.clear();}
  else if(kind==='mount'){match.phase=0;match.scene=6;p.out=false;p.active=true;p.inCart=false;p.stunned=false;p.hasMount=true;p.mount=+$('mount-color').value;p.state=1;p.frame=0;}
  else if(kind==='dismount'){match.phase=0;match.scene=6;p.out=false;p.active=true;p.inCart=false;p.stunned=false;p.hasMount=false;p.mount=-1;p.state=1;p.frame=0;}
- else if(kind==='cart'){match.phase=0;match.scene=6;p.hasMount=false;p.out=true;p.state=8;p.inCart=true;p.cartSet(0,2);p.cartSide=3;}
+ else if(kind==='cart'){match.phase=0;match.scene=6;p.hasMount=false;p.out=true;p.state=8;p.inCart=true;const xy=[[2,0],[W-1,2],[2,H-1],[0,2]][dir];p.cartSet(...xy);p.cartSide=dir;}
+ else if(['idle','walk','ride-walk'].includes(kind)){
+  match.phase=0;match.scene=6;match.input.clear();p.out=false;p.active=true;p.inCart=false;p.stunned=false;p.wonThisRound=0;p.introRise=false;p.state=1;p.stateT=0;p.frame=0;p.frame2=0;p.hold=0;p.dir=dir;
+  if(kind!=='idle'){
+   const [dx,dy]=[[0,1],[-1,0],[0,-1],[1,0]][dir];let start;
+   // Find a real clear corridor, then let the original input and collision
+   // code perform the walk. Never fake animation frames or remove obstacles.
+   for(let y=1;y<H-1&&!start;y++)for(let x=1;x<W-1&&!start;x++)if(Array.from({length:5},(_,i)=>[x+dx*i,y+dy*i]).every(([tx,ty])=>tx>0&&ty>0&&tx<W-1&&ty<H-1&&match.world.tile(tx,ty)===0))start=[x,y];
+   if(!start)return status('Não há corredor livre para este diagnóstico. Use um mapa sem blocos ou caminhe pelas setas.');
+   p.spawnAt(...start);p.dir=dir;p.hasMount=kind==='ride-walk';p.mount=p.hasMount?state.mount:-1;p.speedLvl=state.speed;
+   walkInput=match.input;walkInput.hold(['down','left','up','right'][dir],'lab-walk');walkTimer=setTimeout(stopForcedWalk,1000);
+  }
+ }
  else{
   match.phase=0;match.scene=6;p.hasMount=false;p.inCart=false;p.out=false;p.active=true;p.wonThisRound=0;p.stateT=0;p.frame=0;p.frame2=0;p.hold=0;p.introRise=false;p.stunned=false;
   if(kind==='stun'){p.state=4;p.stunned=true;p.stunT=0;}
@@ -188,7 +203,7 @@ function bind(){
  $('character').onchange=()=>selectCharacter($('character').value).catch(error);$('reference').onchange=()=>selectReference().catch(error);
  $('reload').onclick=()=>selectCharacter($('character').value,true).catch(error);
  $('action').onchange=()=>{state.action=$('action').value;resetLab();};$('speed').onchange=()=>{state.speed=+$('speed').value;resetLab();if(match)match.world.me.speedLvl=state.speed;};$('victory-context').onchange=()=>{state.context=$('victory-context').value;resetLab();};$('warp').onchange=()=>{state.warp=$('warp').value;resetLab();};$('mount-color').onchange=()=>{state.mount=+$('mount-color').value;resetLab();if(match&&match.world.me.hasMount)match.world.me.mount=state.mount;};
- for(const id of ['zoom','guides','effects'])$(id).onchange=draw;
+ for(const id of ['zoom','guides','safe-area','effects'])$(id).onchange=draw;
  $('compare').onchange=()=>{if($('compare').checked)selectReference().catch(error);else draw();};
  $('play').onclick=()=>{if(engine.done&& !state.playing){engine.restart();refEngine?.restart();acc=0;repeatAt=0;}state.playing=!state.playing;$('play').textContent=state.playing?'Pausar':'Reproduzir';last=0;};$('restart').onclick=resetLab;
  $('prev').onclick=()=>seek((engine.p.frame+engine.frames()-1)%engine.frames());$('next').onclick=()=>seek((engine.p.frame+1)%engine.frames());$('scrub').oninput=()=>seek(+$('scrub').value);

@@ -9,6 +9,8 @@ DIST=ROOT/'dist'
 def build():
     DIST.mkdir(exist_ok=True)
     shutil.copytree(ROOT/'web',DIST,dirs_exist_ok=True)
+    guide=json.loads((ROOT/'ORIGEM_GUIA.json').read_text(encoding='utf8'))
+    assert hashlib.sha256((DIST/guide['file']).read_bytes()).hexdigest()==guide['sha256'],'Guia integral divergente'
     data=ROOT/'web/data'
     paths={p.relative_to(data).as_posix().lower():p for p in data.rglob('*') if p.is_file()}
     wanted=set()

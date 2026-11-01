@@ -111,10 +111,12 @@ def project_files(slug):
     return collect((p.name,p.read_bytes()) for p in packs[0].iterdir() if p.is_file() and p.suffix.lower() in ('.gra','.json'))
 
 class Handler(BaseHTTPRequestHandler):
-    def reply(self,status,data,kind='application/json; charset=utf-8'):
+    def reply(self,status,data,kind='application/json; charset=utf-8',guide=False):
         if isinstance(data,(dict,list)):data=json.dumps(data,ensure_ascii=False).encode('utf8')
         if isinstance(data,str):data=data.encode('utf8')
-        self.send_response(status);self.send_header('Content-Type',kind);self.send_header('Content-Length',str(len(data)));self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self'; media-src 'self' blob:");self.end_headers();self.wfile.write(data)
+        policy="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self'; media-src 'self' blob:"
+        if guide:policy="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'"
+        self.send_response(status);self.send_header('Content-Type',kind);self.send_header('Content-Length',str(len(data)));self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Content-Security-Policy',policy);self.end_headers();self.wfile.write(data)
     def do_GET(self):
         url=unquote(urlsplit(self.path).path)
         if url=='/api/health':return self.reply(200,dict(ok=True,tool='OnlyBomb Character Lab',version=1,backup=BACKUP.is_dir()))
@@ -137,9 +139,10 @@ class Handler(BaseHTTPRequestHandler):
         for prefix,folder in roots:
             if url.startswith(prefix):base=folder;rel=url[len(prefix):];break
         target=(base/rel).resolve()
+        if target.is_dir():target=(target/'index.html').resolve()
         if not target.is_relative_to(base.resolve()) or not target.is_file():return self.reply(404,dict(error='Arquivo não encontrado',path=url))
         kind='text/javascript; charset=utf-8' if target.suffix in ('.js','.mjs') else mimetypes.guess_type(str(target))[0] or 'application/octet-stream'
-        self.reply(200,target.read_bytes(),kind)
+        self.reply(200,target.read_bytes(),kind,guide=target==(ROOT/'web/guia/index.html').resolve())
     def do_POST(self):
         origin=self.headers.get('Origin')
         if origin and origin not in (f'http://localhost:{self.server.server_port}',f'http://127.0.0.1:{self.server.server_port}'):return self.reply(403,dict(error='Origem não permitida'))

@@ -6,6 +6,20 @@ def gra(n=3,w=256):
     frame=struct.pack('<HHHH',120,195,1,0xffff)
     return b'\0\0\1\1'+bytes([3,n,100])+bytes(4)+struct.pack('<HHI',w,w,0)+struct.pack('<'+'I'*n,*[(i+1)*4 for i in range(n)])+frame*n
 class ValidationTests(unittest.TestCase):
+    def test_official_prop_outside_recommended_area_is_valid(self):
+        raw=(P.parent/'31_KIT_PERSONAGEM/TODOS_OS_PERSONAGENS/Special_26/ARQUIVOS_DO_JOGO/mo_w.gra').read_bytes()
+        sheet=server.inspect_gra('mo_w',raw)
+        self.assertEqual(sheet['boxes'][2],[74,122,148,190])
+        self.assertFalse(any(i['level']=='error' for i in sheet['issues']))
+        self.assertTrue(any('recomendada' in i['text'] for i in sheet['issues']))
+    def test_integral_guide_hash_and_fullscreen_controls(self):
+        import hashlib
+        origin=json.loads((P/'ORIGEM_GUIA.json').read_text(encoding='utf8'))
+        self.assertEqual(hashlib.sha256((P/'web'/origin['file']).read_bytes()).hexdigest(),origin['sha256'])
+        page=(P/'web/index.html').read_text(encoding='utf8')
+        surface=page.split('<section id="play-surface">')[1].split('</section>')[0]
+        self.assertLess(surface.index('test-actions'),surface.index('id="arena"'))
+        self.assertIn('href="./guia/"',page)
     def test_gra_and_corruption(self):
         self.assertEqual(server.inspect_gra('st_s',gra())['frames'],3)
         for raw in (b'',gra()[:-1],gra()+b'x',b'xxxx'+gra()[4:]):

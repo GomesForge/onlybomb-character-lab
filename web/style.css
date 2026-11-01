@@ -12,3 +12,6 @@ body.arena-expanded{overflow:hidden}#play-surface.expanded,#play-surface:fullscr
 @media(max-width:720px){.training-view main{padding:8px}.training-view>header{padding:8px 12px}.arena-toolbar{gap:8px;padding:8px}.arena-toolbar>div{width:100%}.arena-toolbar label{min-width:105px}#arena{min-height:400px;height:max(400px,calc(100dvh - 100px))}#play-surface.expanded .arena-toolbar>div{display:none}#play-surface.expanded .arena-toolbar .check{display:none}.training-settings h2{font-size:14px}}
 
 @media(max-width:1000px){#play-surface.expanded .arena-toolbar>div{display:none}#play-surface.expanded .arena-toolbar label{min-width:110px}}
+
+/* Controls belong to the fullscreen surface, above the arena. */
+#play-surface .test-actions{flex:none;margin:0;padding:8px 12px;gap:7px;background:#152234;border-bottom:1px solid var(--line);max-height:32dvh;overflow:auto}#play-surface .test-actions label{min-width:115px}#play-surface .test-actions select{margin:0;min-height:32px;padding:4px 7px}#play-surface .test-actions button{min-height:32px;padding:6px 9px}nav .guide-link{margin:0;padding:10px 16px;border:1px solid var(--line);border-radius:7px;text-decoration:none}.arena-toolbar a{margin:0}.frame-legend{max-width:900px}
