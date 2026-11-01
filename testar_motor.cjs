@@ -21,7 +21,14 @@ async function main(){
  for(const action of ['msb_ch','preview','face']){const e=new E.LabEngine(set,louie,{action});for(let i=0;i<100;i++)e.step();assert.equal(e.p.frame,0);assert.equal(e.ms,0);}
  for(const check of checks){const timings=E.measureTimings(set,louie,{action:check.action});assert.equal(timings.ms,check.ms,check.action+' timeline');assert.equal(timings.frames.reduce((a,b)=>a+b,0),check.ms,check.action+' exposure sum');}
  assert.equal(E.measureTimings(set,louie,{action:'dd'}).frames.at(-1),0,'Final death frame must never be exposed');
- const report={passed:true,scope:'Original ESM graph / deterministic20ms unit tests, not a browser gameplay test',checks,allSpeedLevels:true,allDirections:true,staticOnlyFrame0:true,modules:mods.size};
+ const rects=[],ctx={putImageData(){},save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},setLineDash(){},strokeRect(...r){rects.push(r);}},canvas={style:{},getContext(){return ctx;}};
+ const probe=new E.LabEngine(set,louie,{action:'st'});
+ E.paint(probe,canvas,{effects:false,guides:true,zoom:1});
+ assert(rects.some(r=>JSON.stringify(r)==='[0.5,0.5,255,255]'),'Real 256 canvas outline');
+ assert(!rects.some(r=>r[0]===80.5),'Recommended area is off by default');
+ rects.length=0;E.paint(probe,canvas,{effects:false,guides:false,safeArea:true,zoom:1});assert.deepEqual(rects,[[80.5,88.5,96,128]],'Optional recommendation overlay');
+ rects.length=0;E.paint(new E.LabEngine(set,louie,{action:'face'}),canvas,{effects:false,guides:true,safeArea:true,zoom:1});assert.deepEqual(rects,[[108.5,108.5,39,39]],'Face native canvas is only40x40');
+ const report={passed:true,scope:'Original ESM graph / deterministic20ms unit tests, not a browser gameplay test',checks,allSpeedLevels:true,allDirections:true,staticOnlyFrame0:true,frameGuides:true,modules:mods.size};
  fs.writeFileSync(path.join(__dirname,'resultado_motor.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

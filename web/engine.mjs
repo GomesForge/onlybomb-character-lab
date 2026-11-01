@@ -88,7 +88,7 @@ export function paint(engine,canvas,{effects=true,guides=true,safeArea=false,zoo
  const ctx=canvas.getContext('2d');fb.present(ctx);ctx.imageSmoothingEnabled=false;
  // These are overlays only: FB still uses the full native canvas. The amber
  // production recommendation is not a clipping rectangle or a GRA limit.
- if(guides){ctx.save();ctx.lineWidth=1;ctx.strokeStyle='#6db8ff';ctx.strokeRect(.5,.5,255,255);ctx.strokeStyle='#6db8ff88';ctx.beginPath();ctx.moveTo(128.5,1);ctx.lineTo(128.5,255);ctx.stroke();if(action==='face'){ctx.strokeRect(108.5,108.5,39,39);}else{ctx.strokeStyle='#a3d5a388';ctx.beginPath();ctx.moveTo(75,195.5);ctx.lineTo(180,195.5);ctx.stroke();ctx.strokeStyle='#ffffff44';ctx.strokeRect(108.5,162.5,39,37);}ctx.restore();}
+ if(guides){ctx.save();ctx.lineWidth=1;ctx.strokeStyle='#6db8ff';if(action==='face'){ctx.strokeRect(108.5,108.5,39,39);}else{ctx.strokeRect(.5,.5,255,255);ctx.strokeStyle='#6db8ff88';ctx.beginPath();ctx.moveTo(128.5,1);ctx.lineTo(128.5,255);ctx.stroke();ctx.strokeStyle='#a3d5a388';ctx.beginPath();ctx.moveTo(75,195.5);ctx.lineTo(180,195.5);ctx.stroke();ctx.strokeStyle='#ffffff44';ctx.strokeRect(108.5,162.5,39,37);}ctx.restore();}
  if(safeArea&&action!=='face'){ctx.save();ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.strokeStyle='#edbb5caa';ctx.strokeRect(80.5,88.5,96,128);ctx.restore();}
  canvas.style.width=canvas.style.height=(256*zoom)+'px';
 }
