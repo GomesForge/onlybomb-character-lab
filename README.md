@@ -51,3 +51,5 @@ Node 22 ou superior. Testa ZIP armazenado/deflate, CRC, limites, arquivos corrom
 O workflow `.github/workflows/pages.yml` testa, constrói `dist` e publica via GitHub Pages em cada push para `main`. Em Settings → Pages, a origem deve ser GitHub Actions.
 
 Guia definitivo integral: [Guia completo](https://gomesforge.github.io/onlybomb-character-lab/guia/), disponível em /guia/ também no localhost. Inclui todos os anexos originais; SHA-256 conferido no build. Os controles de diagnóstico ficam no topo da arena, inclusive em tela cheia. A guia azul mostra o canvas real; a área amarela opcional é apenas recomendada e não recorta adereços oficiais.
+
+Para conferir o relógio de outro pacote local, `node --experimental-vm-modules testar_motor.cjs "caminho/da/pasta-com-os-GRA"`. Esse teste executa o grafo original sem interface; não substitui o treino no navegador nem a avaliação visual de cada quadro.

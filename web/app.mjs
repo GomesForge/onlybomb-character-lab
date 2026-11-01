@@ -150,7 +150,7 @@ let walkTimer,walkInput;
 function stopForcedWalk(){clearTimeout(walkTimer);if(walkInput)for(const a of ['down','left','up','right'])walkInput.let(a,'lab-walk');walkInput=null;}
 function stopTraining(){stopForcedWalk();if(match){match.stop();match=null;training=null;postResults();}$('training-status').textContent='Treino encerrado.';status('Treino encerrado. O laboratório de animações está disponível.');stopAll();}
 function diagnostic(kind){
- if(!match)return status('Inicie o treino primeiro.');stopForcedWalk();const p=match.world.me;const dir=+$('training-dir').value;p.dir=dir;
+ if(!match)return status('Inicie o treino primeiro.');if(!match.loaded||!match.world?.me)return status('Aguarde o carregamento do treino.');stopForcedWalk();match.labVictory=false;const p=match.world.me;const dir=+$('training-dir').value;p.dir=dir;
  state.diagnostics.push({type:'forced-state',action:kind,character:selected.name,date:new Date().toISOString()});
  if(kind==='entry'){match.phase=0;match.hud.resetRound();for(const actor of match.world.players){actor.resetStats(match.mapSet);actor.spawnAt(actor.tx,actor.ty);if(training.full)actor.fullItems();}match.world.roundStart();match.setScene(5);}
  else if(kind==='reset'){p.spawnAt(p.tx,p.ty);p.resetStats(match.mapSet);p.fullItems();match.phase=0;match.setScene(6);match.input.clear();}

@@ -10,7 +10,7 @@ async function main(){
  const data=path.join(__dirname,'../38_BACKUP_SERVIDOR_2026-10-31/01_JOGO_SITE_onlybomb.online/data');
  const L=['MO_S','MO_W','MO_N','MO_E','ST_S','ST_W','ST_N','ST_E'].map(n=>runs(path.join(data,'player/Lui',n+'.gra')));
  const louie=Array.from({length:4},()=>L);
- const project=path.join(__dirname,'../Personagens Customizados/MADARA_BOMBER/entrega/madara-bomber');
+ const project=process.argv[2]?path.resolve(process.argv[2]):path.join(__dirname,'../Personagens Customizados/MADARA_BOMBER/entrega/madara-bomber');
  const set=E.NAMES.map(n=>runs(path.join(project,n+'.gra'))),checks=[];
  function cycle(action,limit=4000,opts={}){const e=new E.LabEngine(set,louie,{action,...opts});let saw=false;for(let t=0;t<limit;t+=20){e.step();if(e.p.frame!==0)saw=true;if(e.done)return e;if(saw&&e.p.frame===0&&['st','mo','pa','wi'].includes(action))return e;}return e;}
  const count=n=>set[E.INDEX[n]].n,quantize=ms=>Math.ceil(ms/20)*20;
