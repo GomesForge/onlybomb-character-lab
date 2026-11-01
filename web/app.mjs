@@ -7,6 +7,7 @@ import { Match } from './js/game/match.js';
 import { Training } from './js/game/training.js';
 import { settings, stopAll } from './js/game/sound.js';
 import { display } from './js/game/display.js';
+import { Screen } from './js/game/screen.js';
 import { LabEngine, paint, drawRuns, bbox, measureTimings, DIRS, NAMES, INDEX, sheetName, WALK_MS } from './engine.mjs';
 const $=id=>document.getElementById(id);
 const state={view:'lab',action:'st',dir:0,speed:4,context:'round',warp:'entry',mount:0,playing:true,ready:false,epoch:0,diagnostics:[],errors:[]};
@@ -109,13 +110,29 @@ function drawSeam(now=0){
  $('seam-info').textContent=`${l.n}[${l.f}] · caixa${bbox(l.run,l.f)?.join(', ')} → ${r.n}[${r.f}] · caixa${bbox(r.run,r.f)?.join(', ')}${mode==='alternate'?' · alternância lenta só para inspeção':''}`;
 }
 function setView(view){
- if(state.view==='training'&&view!=='training')stopTraining();state.view=view;last=0;acc=0;
+ if(state.view==='training'&&view!=='training'){expandArena(false);stopTraining();}state.view=view;last=0;acc=0;document.body.classList.toggle('training-view',view==='training');
  document.querySelectorAll('.view').forEach(e=>e.hidden=e.id!=='view-'+view);document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
- if(view==='seams')drawSeam();if(view==='lab')draw();
+ if(view==='seams')drawSeam();if(view==='lab')draw();if(view==='training')requestAnimationFrame(fitTrainingCanvas);
+}
+function fitTrainingCanvas(){
+ const arena=$('arena'),canvas=$('game-canvas');if(state.view!=='training'||!arena.clientWidth||!arena.clientHeight)return;
+ const ratio=match?.screen?match.screen.srcW/match.screen.srcH:4/3;
+ const w=Math.floor(Math.min(arena.clientWidth,arena.clientHeight*ratio)),h=Math.floor(w/ratio);
+ canvas.style.width=w+'px';canvas.style.height=h+'px';
+ $('render-info').textContent=`800×600 nativo · ${w}×${h} na tela`;
+}
+function expandArena(on){
+ if(!on&&document.fullscreenElement===$('play-surface'))document.exitFullscreen().catch(()=>{});
+ $('play-surface').classList.toggle('expanded',on);document.body.classList.toggle('arena-expanded',on);$('expand-arena').textContent=on?'Voltar ao laboratório':'Ampliar arena';$('expand-arena').setAttribute('aria-pressed',String(on));requestAnimationFrame(fitTrainingCanvas);if(match)$('game-canvas').focus();
+}
+function changeTrainingFilter(){
+ display.filter=$('render-filter').value;
+ if(match?.loaded){match.screen.dispose();match.screen=new Screen(match.canvas);match.sizeScreen();match.fitFrame();fitTrainingCanvas();}
 }
 async function startTraining(){
  if(!selected||!report.valid)return;stopTraining();status('Carregando arena do cliente original…');
- display.sideArt=false;display.smooth=false;display.filter='classic';settings.bgm=settings.sfx=$('audio').checked;
+ expandArena(true);
+ display.sideArt=false;display.lite=false;display.smooth=$('fluid-motion').checked;display.filter=$('render-filter').value;settings.bgm=settings.sfx=$('audio').checked;
  const s={myId:1,users:new Map([[1,{nick:'TesteLocal',cls:0}]]),outfit:{wearing:false,look:selected.look},wallet:{bomb:0},belts:[],beltOf:()=>0,superBroadcast:null};
  training=new Training(s,{map:+$('map').value,bots:+$('bots').value,blocks:$('blocks').checked,full:true,items:8191});
  match=new Match(training.sessionFor(),$('game-canvas'),null);training.onEnd=()=>{stopTraining();status('Treino encerrado.');};
@@ -126,7 +143,7 @@ async function startTraining(){
   const update=instance.update.bind(instance);let lastSample=0;
   instance.update=dt=>{update(dt);if(instance.world.clock-lastSample>=200){lastSample=instance.world.clock;const p=instance.world.me;state.diagnostics.push({type:'training-sample',ms:lastSample,state:p.state,frame:p.frame,dir:p.dir,tile:[p.tx,p.ty],bombs:instance.world.bombs.length});if(state.diagnostics.length>1500)state.diagnostics.splice(0,1);}};
   const nextRound=instance.nextRound.bind(instance);instance.nextRound=(...args)=>{if(instance.labVictory){instance.labVictory=false;setTimeout(()=>{if(match===instance)diagnostic('reset');},0);return;}nextRound(...args);};
-  $('game-canvas').focus();status('Treino ativo. Clique na arena e use as setas, espaço e Z.');postResults();}catch(e){if(match===instance)stopTraining();throw e;}
+  fitTrainingCanvas();$('game-canvas').focus();status('Treino ativo. Clique na arena e use as setas, espaço e Z.');postResults();}catch(e){if(match===instance)stopTraining();throw e;}
 }
 function stopTraining(){if(match){match.stop();match=null;training=null;postResults();}$('training-status').textContent='Treino encerrado.';status('Treino encerrado. O laboratório de animações está disponível.');stopAll();}
 function diagnostic(kind){
@@ -161,6 +178,12 @@ async function browserSelfTest(){
  state.diagnostics.push({type:'browser-render-and-clock-smoke',character:selected.name,tests,scope:'Every sheet decoded, rendered with originalFB and clock-stepped. Does not prove visual quality or completed gameplay.'});await postResults();
 }
 function bind(){
+ $('expand-arena').onclick=()=>expandArena(!$('play-surface').classList.contains('expanded'));
+ $('fullscreen-arena').onclick=async()=>{expandArena(true);try{if(!document.fullscreenElement)await $('play-surface').requestFullscreen();else await document.exitFullscreen();}catch{status('Arena ampliada nesta janela. Use F11 no navegador para ocupar a tela inteira.');}};
+ $('render-filter').onchange=()=>{changeTrainingFilter();if(match)$('game-canvas').focus();};$('fluid-motion').onchange=()=>{display.smooth=$('fluid-motion').checked;if(match)$('game-canvas').focus();};
+ document.addEventListener('fullscreenchange',()=>{expandArena(!!document.fullscreenElement);});
+ window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('play-surface').classList.contains('expanded')){e.preventDefault();e.stopImmediatePropagation();expandArena(false);}},true);
+ new ResizeObserver(fitTrainingCanvas).observe($('arena'));
  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));document.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{state.dir=+b.dataset.dir;resetLab();});
  $('character').onchange=()=>selectCharacter($('character').value).catch(error);$('reference').onchange=()=>selectReference().catch(error);
  $('reload').onclick=()=>selectCharacter($('character').value,true).catch(error);

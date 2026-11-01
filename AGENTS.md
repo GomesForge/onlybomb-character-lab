@@ -1,5 +1,7 @@
 # Atualização vigente — publicação e importação, 01/11/2026
 
+Treino usa a largura disponível e abre em modo ampliado, com tela cheia opcional e filtros do Screen original. Padrão: Suave/xBR e movimento fluido (interpolação de posição original), sem alterar relógio, quadros ou física. A inspeção de GRA continua nativa; não aprovar arte apenas porque um filtro de apresentação melhora sua aparência. Escape sai da ampliação antes de abrir o menu de sair da partida. Mudanças de filtro podem reconstruir somente a instância Screen, preservando Match/World/Player.
+
 A interface deve iniciar vazia, sem carregar personagem até importação. Importados e relatórios ficam exclusivamente na memória da aba; não enviar arquivos, metadados ou diagnósticos a APIs. Recarregar a página limpa a sessão. O usuário autorizou GitHub Pages público caso acesso privado via convite não seja suportado pelo plano. Repositório: GomesForge/onlybomb-character-lab. URL: https://gomesforge.github.io/onlybomb-character-lab/.
 
 Frontend estático em web; importação/validação em web/pack.mjs. Recursos necessários em web/data/img/i18n; não publicar entregas customizadas, contas, logs ou painel GM. Build via build_pages.py com caminhos de recursos sensíveis a maiúsculas/minúsculas. Novas mudanças devem passar testar_importacao.mjs e verificação real da importação e treino no navegador; preservar os 58 módulos originais.
