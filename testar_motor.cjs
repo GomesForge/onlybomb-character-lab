@@ -10,7 +10,28 @@ async function main(){
  const data=path.join(__dirname,'../38_BACKUP_SERVIDOR_2026-10-31/01_JOGO_SITE_onlybomb.online/data');
  const L=['MO_S','MO_W','MO_N','MO_E','ST_S','ST_W','ST_N','ST_E'].map(n=>runs(path.join(data,'player/Lui',n+'.gra')));
  const louie=Array.from({length:4},()=>L);
- const project=process.argv[2]?path.resolve(process.argv[2]):path.join(__dirname,'../Personagens Customizados/MADARA_BOMBER/entrega/madara-bomber');
+ if(process.argv[2]==='--kit'){
+  const {importPacks}=await import(pathToFileURL(path.join(root,'pack.mjs')));
+  const kit=path.resolve(process.argv[3]||path.join(__dirname,'../31_KIT_PERSONAGEM/TODOS_OS_PERSONAGENS'));
+  const dirs=fs.readdirSync(kit,{withFileTypes:true}).filter(d=>d.isDirectory()),inputs=[];
+  for(const d of dirs){const folder=path.join(kit,d.name,'ARQUIVOS_DO_JOGO');for(const f of fs.readdirSync(folder))if(/\.gra$|^character\.json$/i.test(f)){const b=fs.readFileSync(path.join(folder,f));inputs.push({name:f,webkitRelativePath:'TODOS_OS_PERSONAGENS/'+d.name+'/ARQUIVOS_DO_JOGO/'+f,size:b.length,arrayBuffer:async()=>Uint8Array.from(b).buffer});}}
+  const entries=await importPacks(inputs);assert.equal(entries.length,dirs.length);const results=[];let sheets=0,frames=0,clocks=0;
+  const blank=new F.Runs([new Int32Array()],new Uint16Array(),256,256),fb=new F.FB();
+  for(const entry of entries){assert(entry.report.valid,entry.name+':'+JSON.stringify(entry.report.issues.filter(i=>i.level==='error')));const decoded={};
+   for(const [n,info]of Object.entries(entry.report.sheets)){const r=F.Runs.fromSprite(new Sprite(n,Uint8Array.from(entry.files.get(n+'.gra')).buffer));assert.equal(r.n,info.frames);for(let i=0;i<r.n;i++)fb.opaque(r,i,0,0);decoded[n]=r;sheets++;frames+=r.n;}
+   const set=E.NAMES.map(n=>decoded[n]||decoded[entry.report.fallbacks[n]]||blank),extras=Object.fromEntries(entry.report.extras.map(n=>[n,decoded[n]]));
+   const checks=[];
+   for(const n of Object.keys(decoded)){
+    const isExtra=E.INDEX[n]===undefined;const dir=n.match(/_([swne])$/)?.[1];const action=isExtra?'extra:'+n:dir?n.slice(0,-2):n;
+    const opts={action,dir:dir?'swne'.indexOf(dir):0,extras};const e=new E.LabEngine(set,louie,opts);for(let i=0;i<180;i++)e.step();
+    const t=E.measureTimings(set,louie,opts);assert(t.ms>=0&&t.ms<=30000,n);assert.equal(t.frames.length,decoded[n].n,n);checks.push({file:n+'.gra',frames:decoded[n].n,ms:t.ms,extra:isExtra});clocks++;
+   }
+   results.push({name:entry.name,valid:true,kind:entry.report.kind,files:entry.report.files,frames:entry.report.frames,fallbacks:entry.report.fallbacks,checks});
+  }
+  const result={passed:true,scope:'Every kit folder imported without JSON; every source GRA decoded and blitted with original Runs/FB; available actions clock-stepped in original Player/Hud. Not visual approval or a manual gameplay test of all92.',characters:entries.length,sheets,frames,clocks,results};
+  fs.writeFileSync(path.join(__dirname,'resultado_kit.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({...result,results:undefined}));return;
+ }
+ const project=process.argv[2]?path.resolve(process.argv[2]):path.join(__dirname,'../Personagens Customizados/MADARA_BOMBER/entrega/ARQUIVOS_GRA');
  const set=E.NAMES.map(n=>runs(path.join(project,n+'.gra'))),checks=[];
  const traceModule=moduleFor(path.join(root,'animation-trace.mjs'));await traceModule.link(()=>{throw Error('Unexpected import');});await traceModule.evaluate();
  const {playerSheet,AnimationTrace}=traceModule.namespace;

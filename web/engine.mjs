@@ -8,10 +8,10 @@ export const NAMES=['mo','st','th','pa','pu'].flatMap(a=>DIRS.map(d=>a+'_'+d)).c
 export const INDEX=Object.fromEntries(NAMES.map((n,i)=>[n,i]));
 export const WALK_MS=[100,80,80,80,60,60,60,40];
 const STATES={mo:0,st:1,th:2,pu:3,pa:4,dd:5,wi:6,wa:7,rui_mo:0,rui_st:1};
-export function sheetName(action,dir){return ['dd','wi','wa','preview','face'].includes(action)?action:action+'_'+DIRS[dir];}
+export function sheetName(action,dir){return action.startsWith('extra:')?action.slice(6):['dd','wi','wa','preview','face'].includes(action)?action:action+'_'+DIRS[dir];}
 export class LabEngine {
- constructor(set,louie,{action='st',dir=0,speed=4,context='round',warp='entry',mount=0}={}){
-  Object.assign(this,{set,louie,action,dir,speed,context,warp,mount});this.restart();
+ constructor(set,louie,{action='st',dir=0,speed=4,context='round',warp='entry',mount=0,extras={}}={}){
+  Object.assign(this,{set,louie,action,dir,speed,context,warp,mount,extras});this.restart();
  }
  restart(){
   this.world={match:{myId:1,phase:0,scene:6,rules:[1,0,0,0,0]},mapSet:1,mode:0,gimmicks:{warps:[]},me:null,sendMove(){},tile(){return 0;}};
@@ -25,9 +25,10 @@ export class LabEngine {
   if(this.action==='wi')p.wonThisRound=1;
   this.record();return this;
  }
- frames(){return this.set[INDEX[sheetName(this.action,this.dir)]]?.n||1;}
+ frames(){const n=sheetName(this.action,this.dir);return (this.action.startsWith('extra:')?this.extras[n]:this.set[INDEX[n]])?.n||1;}
  record(){const k=this.p.state+':'+this.p.frame;if(k!==this.lastKey){this.trace.push({ms:this.ms,state:this.p.state,frame:this.p.frame});this.lastKey=k;}}
  step(){
+  if(this.action.startsWith('extra:')){this.manual=false;this.ms+=20;if(this.ms%60===0)this.p.frame=(this.p.frame+1)%this.frames();this.record();return;}
   if(this.done||['face','preview','msb_ch'].includes(this.action))return;
   const p=this.p;this.manual=false;this.ms+=20;
   if(this.action==='wi'){
@@ -47,6 +48,7 @@ export class LabEngine {
  }
  seek(i){this.restart();this.manual=true;this.p.frame=Math.min(this.frames()-1,Math.max(0,i));this.p.frame2=this.p.frame;this.ms=0;this.done=false;}
  current(){
+  if(this.action.startsWith('extra:'))return {name:sheetName(this.action,this.dir),frame:this.p.frame};
   if(this.manual)return {name:sheetName(this.action,this.dir),frame:this.p.frame};
   if(['face','preview','msb_ch'].includes(this.action))return {name:sheetName(this.action,this.dir),frame:0};
   if(this.action.startsWith('rui_'))return {name:sheetName(this.action,this.dir),frame:this.p.frame};
@@ -57,12 +59,13 @@ export class LabEngine {
 
 export function measureTimings(set,louie,options){
  const e=new LabEngine(set,louie,options),times=Array(e.frames()).fill(0),wanted=sheetName(e.action,e.dir);
+ if(e.action.startsWith('extra:')&&e.frames()===1)return {ms:60,frames:[60],static:false};
  if(['face','preview','msb_ch'].includes(e.action))return {ms:0,frames:times,static:true};
  let moved=false;
  for(let guard=0;guard<1500;guard++){
   const c=e.current();if(c.name===wanted&&!e.done)times[Math.min(times.length-1,c.frame)]+=20;
   e.step();if(e.p.frame!==0)moved=true;
-  if(e.done||moved&&e.p.frame===0&&['st','mo','pa','wi','rui_st','rui_mo'].includes(e.action))break;
+  if(e.done||moved&&e.p.frame===0&&(['st','mo','pa','wi','rui_st','rui_mo'].includes(e.action)||e.action.startsWith('extra:')))break;
  }
  return {ms:e.ms,frames:times,static:false};
 }
@@ -73,7 +76,8 @@ export function paint(engine,canvas,{effects=true,guides=true,safeArea=false,zoo
  const p=engine.p,action=engine.action;
  if(!framebuffer)framebuffer=new FB();
  const fb=framebuffer;fb.clear(rgb565(21,32,43));fb.hdBlits.length=0;
- if(action==='face')fb.opaque(engine.set[36],0,108,108);
+ if(action.startsWith('extra:'))fb.opaque(engine.extras[sheetName(action,engine.dir)],p.frame,0,0);
+ else if(action==='face')fb.opaque(engine.set[36],0,108,108);
  else if(action==='preview')fb.opaque(engine.set[35],0,0,0);
  else if(action==='msb_ch')p.drawCart(fb);
  else if(p.state!==8 || engine.manual){
@@ -88,7 +92,7 @@ export function paint(engine,canvas,{effects=true,guides=true,safeArea=false,zoo
  const ctx=canvas.getContext('2d');fb.present(ctx);ctx.imageSmoothingEnabled=false;
  // These are overlays only: FB still uses the full native canvas. The amber
  // production recommendation is not a clipping rectangle or a GRA limit.
- if(guides){ctx.save();ctx.lineWidth=1;ctx.strokeStyle='#6db8ff';if(action==='face'){ctx.strokeRect(108.5,108.5,39,39);}else{ctx.strokeRect(.5,.5,255,255);ctx.strokeStyle='#6db8ff88';ctx.beginPath();ctx.moveTo(128.5,1);ctx.lineTo(128.5,255);ctx.stroke();ctx.strokeStyle='#a3d5a388';ctx.beginPath();ctx.moveTo(75,195.5);ctx.lineTo(180,195.5);ctx.stroke();ctx.strokeStyle='#ffffff44';ctx.strokeRect(108.5,162.5,39,37);}ctx.restore();}
+ if(guides){ctx.save();ctx.lineWidth=1;ctx.strokeStyle='#6db8ff';if(action==='face'){const r=engine.set[36];ctx.strokeRect(108.5,108.5,r.w-1,r.h-1);}else{ctx.strokeRect(.5,.5,255,255);ctx.strokeStyle='#6db8ff88';ctx.beginPath();ctx.moveTo(128.5,1);ctx.lineTo(128.5,255);ctx.stroke();ctx.strokeStyle='#a3d5a388';ctx.beginPath();ctx.moveTo(75,195.5);ctx.lineTo(180,195.5);ctx.stroke();ctx.strokeStyle='#ffffff44';ctx.strokeRect(108.5,162.5,39,37);}ctx.restore();}
  if(safeArea&&action!=='face'){ctx.save();ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.strokeStyle='#edbb5caa';ctx.strokeRect(80.5,88.5,96,128);ctx.restore();}
  canvas.style.width=canvas.style.height=(256*zoom)+'px';
 }

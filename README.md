@@ -6,13 +6,13 @@ Ferramenta interna deste projeto para importar, inspecionar e testar personagens
 
 ## Uso
 
-1. A página sempre abre **sem personagem**. Importe um ZIP, uma pasta ou os 37 GRA com `character.json`.
+1. A página sempre abre **sem personagem**. Importe uma pasta, ZIP ou GRA soltos, **com ou sem `character.json`**. Pode selecionar a coleção `TODOS_OS_PERSONAGENS`: cada subpasta vira um personagem na lista.
 2. A importação é processada **somente neste navegador**. Não há upload, login, telemetria ou persistência dos pacotes. Atualizar ou fechar a página limpa a sessão. Para reler arquivos modificados no computador, importe novamente.
 3. Em **Animações**, escolha ação e direção, pause, avance quadro a quadro e compare com os looks oficiais. Louie e carrinho usam as camadas originais.
 4. Em **Treino jogável**, inicie a arena: setas movem, espaço coloca bomba/usa luva, Z usa habilidade. É o Training original, com Match, World, Player e HUD, colisão, bombas, itens, bots e READY/GO. Os botões de diagnóstico forçam estados e registram essa distinção no relatório local.
 5. Em **Continuidade**, compare poses na mesma âncora. Em **Validação**, confira contagens, RLE, dimensões, JSON e bordas. Baixe o relatório explicitamente se desejar guardá-lo.
 
-O treino inicia no modo normal, com os botões de diagnóstico abaixo da arena. Ampliar é uma escolha manual. No treino, a barra lateral é recolhida para a arena usar toda a largura disponível. **Ampliar arena** ocupa a janela e **Tela cheia** usa a tela do navegador. Escape retorna à interface. A proporção original 4:3 é preservada, sem esticar ou cortar o campo. Os filtros **Nítido**, **Suave (xBR)**, **Clássico** e **CRT** usam o renderizador original; a opção de movimento fluido interpola o deslocamento entre os passos de20ms, sem criar ou retardar quadros de animação. A inspeção das folhas continua em RGB565 nativo.
+O treino inicia no modo normal, com os botões de diagnóstico acima da arena. No treino, a barra lateral é recolhida para a arena usar toda a largura disponível. **Tela cheia** usa a tela do navegador; Escape retorna à interface. A proporção original 4:3 é preservada, sem esticar ou cortar o campo. Os filtros **Nítido**, **Suave (xBR)**, **Clássico** e **CRT** usam o renderizador original; a opção de movimento fluido interpola o deslocamento entre os passos de20ms, sem criar ou retardar quadros de animação. A inspeção das folhas continua em RGB565 nativo.
 
 O site e este repositório são públicos: o plano disponível não permitiu Pages em repositório privado. Os personagens customizados não fazem parte do repositório nem da publicação.
 
@@ -60,8 +60,19 @@ Atualização de interface: nomes exatos da animação anterior/atual em destaqu
 
 ### Personagens HD do backup
 
-Importe as37folhasGRA e character.json junto de uma pasta hd/ com hd.json e os atlas <folha>.png ou <folha>.webp. Também pode selecionar os arquivos juntos. O contrato é o do backup: format, scale, grey_bit, sheets com frames/box/size/rects; a grade PNG antiga com cols também funciona. Os35slots de partida podem ter HD; preview/face continuam nativos, como o cliente original.
+Importe as folhas GRA, com ou sem character.json, junto de uma pasta hd/ com hd.json e os atlas <folha>.png ou <folha>.webp. Também pode selecionar os arquivos juntos. O contrato é o do backup: format, scale, grey_bit, sheets com frames/box/size/rects; a grade PNG antiga com cols também funciona. Os35slots de partida podem ter HD; preview/face continuam nativos, como o cliente original.
 
 HD no treino usa hdPixels, HD_SHEETS e o shader/oclusão/desempenho do Screen original, sem modificar os58módulos ou os relógios. A inspeção de GRA e seus limites permanece nativa. Desmarque HD no treino para comparar. O contador informa quantas folhas estão efetivamente sendo usadas pelo passe HD. Arquivo ausente, contagem divergente, retângulo inválido ou imagem que falha ao decodificar retorna ao GRA daquela folha, com aviso. Sem WebGL ou quando o controle original detecta aparelho lento, o GRA também permanece.
 
-Importação exclusivamente local, sem envio. Limites:32MB por arquivo,128MB porZIP,256MB descompactados,1000entradas. Testes: testar_hd.mjs, testar_importacao.mjs, testar_motor.cjs e navegador com PNG antigo/WebP/HDdesligado/atlas corrompido. Fixtures técnicas em .test-data não são arte de personagem nem publicadas no site.
+Importação exclusivamente local, sem envio. Limites:32MB por arquivo,128MB porZIP,256MB de conteúdo reconhecido,10000arquivos reconhecidos e40000entradas no diretório ZIP. Testes: testar_hd.mjs, testar_importacao.mjs, testar_motor.cjs e navegador com PNG antigo/WebP/HDdesligado/atlas corrompido. Fixtures técnicas em .test-data não são arte de personagem nem publicadas no site.
+
+
+### Importação dos personagens originais e versões regionais
+
+O GRA binário é a fonte de verdade. JSON ausente, inválido ou divergente não impede reprodução de GRA válido. As recomendações de contagem/tamanho para criar e enviar personagens são avisos, separados da leitura no laboratório. Corrupção RLE, assinatura, offsets e limites de memória continuam sendo erros.
+
+Pastas com `ARQUIVOS_DO_JOGO` são reconhecidas automaticamente. ZIP/pasta contendo vários personagens separa cada um, preservando seus nomes. PNGs de revisão e mapas são ignorados. A pasta Lui é reconhecida como montaria com suas8folhas de movimento/repouso. Folhas adicionais (add, ho_*, rui_ri etc.) aparecem na lista de inspeção: o loop de60ms dessas folhas é apenas inspeção, pois elas não fazem parte dos37slots deste cliente.
+
+`preview.gra` ausente usa explicitamente `st_s.gra` na prévia. Soco ausente desabilita seu diagnóstico; se o estado for acionado pelo próprio jogo, usa o repouso do mesmo personagem e identifica isso no nome/relatório. Outras ações ausentes também são indicadas; não há substituição por White. Os arquivos originais não são modificados.
+
+Verificação integral local do kit: `node --experimental-vm-modules testar_motor.cjs --kit`. Este teste importa cada pasta sem JSON, decodifica e desenha todos os quadros com Runs/FB originais e executa os relógios das folhas disponíveis. Resultado local em resultado_kit.json (não publicado). Limites de envio reconhecido:32MB/arquivo,128MB/ZIP,256MB no total,10000arquivos reconhecidos; o diretório ZIP pode ter até40000entradas incluindo conteúdo ignorado.

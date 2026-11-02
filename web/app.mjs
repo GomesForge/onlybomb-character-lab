@@ -1,6 +1,6 @@
 import { loadAssets } from './js/game/assets.js';
 import { CHARACTERS, CHARACTER_COUNT, characterSet, louieSets } from './js/game/characters.js';
-import { importPack } from './pack.mjs';
+import { importPacks } from './pack.mjs?v=20261102-kit1';
 import { Sprite } from './js/assets/spr.js';
 import { Runs } from './js/game/fb565.js';
 import { Match } from './js/game/match.js';
@@ -9,7 +9,7 @@ import { settings, stopAll } from './js/game/sound.js';
 import { display } from './js/game/display.js';
 import { Screen } from './js/game/screen.js';
 import { W, H } from './js/game/mapdata.js';
-import { LabEngine, paint, drawRuns, bbox, measureTimings, DIRS, NAMES, INDEX, sheetName, WALK_MS } from './engine.mjs';
+import { LabEngine, paint, drawRuns, bbox, measureTimings, DIRS, NAMES, INDEX, sheetName, WALK_MS } from './engine.mjs?v=20261102-kit1';
 import { AnimationTrace, playerSheet } from './animation-trace.mjs';
 import { attachLocalHd } from './hd-local.mjs';
 import { HD_STATE } from './js/game/fb565.js';
@@ -19,6 +19,7 @@ const library=new Map();let selected,reference,engine,refEngine,louie,match,trai
 let resources;const empty=new Runs([new Int32Array()],new Uint16Array(),256,256);
 const animationTraces={lab:new AnimationTrace(),training:new AnimationTrace()};
 function showAnimation(scope,file){
+ if(selected&&!selected.native&&file){const name=file.replace(/\.gra$/,'');if(!report.sheets[name]){const source=report.fallbacks?.[name];file=source?source+'.gra ('+name+'.gra ausente)':file+' (ausente)';}}
  const trace=animationTraces[scope];if(!trace.observe(file))return;
  $(scope+'-previous-file').textContent=trace.previous||'—';$(scope+'-current-file').textContent=trace.current||'Nenhum arquivo em exibição';
 }
@@ -38,7 +39,15 @@ window.addEventListener('error',e=>error(e.error||e.message));window.addEventLis
 function register(entry){
  library.set(entry.id,entry);const opt=new Option(entry.name,entry.id);$('custom-group').append(opt);return entry;
 }
-function options(){return {action:state.action,dir:state.dir,speed:state.speed,context:state.context,warp:state.warp,mount:state.mount};}
+function options(){return {action:state.action,dir:state.dir,speed:state.speed,context:state.context,warp:state.warp,mount:state.mount,extras:selected?.extraRuns||{}};}
+function runFor(entry,name){return INDEX[name]===undefined?entry.extraRuns?.[name]:entry.set[INDEX[name]];}
+function hasAction(action,dir=state.dir){const n=sheetName(action,dir);return selected?.native||!!report?.sheets[n]||n==='preview'&&!!report?.fallbacks?.preview;}
+function syncActions(){
+ if(!selected)return;
+ for(const option of $('action').options)option.disabled=!hasAction(option.value);
+ const actions={idle:'st',walk:'mo',stun:'pa',throw:'th',punch:'pu',death:'dd',victory:'wi',entry:'wa',mount:'rui_st','ride-walk':'rui_mo',cart:'msb_ch'};
+ for(const b of document.querySelectorAll('[data-test]'))b.disabled=!!actions[b.dataset.test]&&!hasAction(actions[b.dataset.test],+$('training-dir').value);
+}
 async function loadEntry(entry,force=false){
  if(entry.set&&!force)return entry;
  if(force&&entry.hdSheets){for(const s of entry.hdSheets.values()){s.bad=true;s.bytes=s.pixels=null;}entry.hdSheets=null;}
@@ -47,25 +56,28 @@ async function loadEntry(entry,force=false){
   const map=entry.report.sheets;
   // Read only structurally valid files. Missing files stay visibly empty; never substitute White.
   entry.set=await Promise.all(NAMES.map(async n=>{
-   if(!map[n])return empty;
+   if(!map[n]){const alias=entry.report.fallbacks?.[n],bytes=alias&&entry.files.get(alias+'.gra');return bytes?Runs.fromSprite(new Sprite(alias,bytes.slice().buffer)):empty;}
    const bytes=entry.files.get(n+'.gra');return Runs.fromSprite(new Sprite(n,bytes.slice().buffer));
   }));
+  entry.extraRuns=Object.fromEntries(entry.report.extras.map(n=>[n,Runs.fromSprite(new Sprite(n,entry.files.get(n+'.gra').slice().buffer))]));
  }
  return entry;
 }
 function nativeReport(entry){const sheets={};NAMES.forEach((n,i)=>{const r=entry.set[i];sheets[n]={file:n+'.gra',frames:r.n,w:r.w,h:r.h,boxes:Array.from({length:r.n},(_,f)=>bbox(r,f)),issues:[]};});return {sheets,issues:[],files:37,frames:entry.set.reduce((s,r)=>s+r.n,0),valid:true,native:true,note:'Referência nativa carregada pelo decodificador/tinta originais.'};}
 async function selectCharacter(id,force=false){
  const token=++state.epoch;stopTraining();status('Carregando personagem…');const entry=library.get(id);if(!entry)throw Error('Personagem desconhecido');await ensureResources();await loadEntry(entry,force);if(token!==state.epoch)return;
- selected=entry;report=entry.report;for(const trace of Object.values(animationTraces))trace.reset();$('subject-name').textContent=entry.name;$('pack-info').textContent=`${report.files}/37 folhas · ${report.frames} quadros${entry.native?' · oficial':' · projeto / importação local'}`;
+ selected=entry;report=entry.report;for(const trace of Object.values(animationTraces))trace.reset();$('subject-name').textContent=entry.name;$('pack-info').textContent=`${report.files} folhas GRA · ${report.frames} quadros${report.kind==='mount'?' · montaria':entry.native?' · oficial':' · importação local · JSON opcional'}`;
+ $('extra-actions')?.remove();if(report.extras?.length){const group=document.createElement('optgroup');group.id='extra-actions';group.label='Folhas adicionais · inspeção';for(const n of report.extras)group.append(new Option(n+'.gra','extra:'+n));$('action').append(group);}
+ if(!hasAction(state.action))state.action='st';$('action').value=state.action;
  syncHd();
- enableSubject(true);$('start-training').disabled=!report.valid;$('empty-state').hidden=true;$('sprite').hidden=false;
+ enableSubject(true);syncActions();$('start-training').disabled=!report.valid;$('empty-state').hidden=true;$('sprite').hidden=false;
  if(match?.world?.me){match.world.me.set=entry.set;match.world.me.look=entry.look;}
- resetLab();renderValidation();drawSeam();status(report.valid?'Pronto. Ritmo e renderização do cliente original.':'Há erros no pacote. Inspeção disponível; corrija os arquivos antes do treino.');
+ resetLab();renderValidation();drawSeam();status(report.valid?'Pronto. GRA lidos diretamente; JSON opcional. Ações ausentes/adicionais são identificadas na validação.':'Há erros binários ou faltam repouso/caminhada. Inspeção disponível; confira a validação antes do treino.');
  await browserSelfTest();
 }
 async function selectReference(){if(!selected||!$('compare').checked)return;reference=await loadEntry(library.get($('reference').value));resetLab();}
 function resetLab(){
- if(!selected)return;engine=new LabEngine(selected.set,louie,options());refEngine=reference?new LabEngine(reference.set,louie,options()):null;last=0;acc=0;repeatAt=0;seenFrame='';state.playing=true;$('play').textContent='Pausar';
+ if(!selected)return;syncActions();engine=new LabEngine(selected.set,louie,options());refEngine=reference&&!state.action.startsWith('extra:')?new LabEngine(reference.set,louie,{...options(),extras:reference.extraRuns||{}}):null;last=0;acc=0;repeatAt=0;seenFrame='';state.playing=true;$('play').textContent='Pausar';
  $('warp-control').hidden=state.action!=='wa';document.querySelectorAll('[data-dir]').forEach(b=>b.classList.toggle('active',+b.dataset.dir===state.dir));
  const n=engine.frames();$('scrub').max=n-1;$('scrub').value=0;buildFilmstrip();clockNote();draw();
 }
@@ -80,10 +92,12 @@ function clockNote(){
  if(a==='wi')note=`Vitória: ${state.context==='round'?'80ms/quadro no fim da rodada':'média70ms/quadro no placar'} · loop conforme contagem real.`;
  if(a==='wa')note=`Entrada/teleporte: ${n}×40ms=${n*40}ms por sentido. Entrada toca do último ao0; READY/GO completo está no treino.`;
  if(['msb_ch','preview','face'].includes(a))note='O jogo usa somente o quadro0 nesta situação. Inspecionar outros quadros não muda esse comportamento.';
+ if(a.startsWith('extra:'))note='Folha adicional fora dos37slots deste cliente. Inspeção em loop de60ms/quadro; não representa uma ação/velocidade usada pelo jogo.';
+ const nfile=sheetName(a,state.dir);if(!report.sheets[nfile])note=(report.fallbacks?.[nfile]?'Derivada de '+report.fallbacks[nfile]+'.gra. ':'Folha ausente; sem animação original para esta ação. ')+note;
  $('clock-note').textContent=note;
 }
 function buildFilmstrip(){
- const n=sheetName(state.action,state.dir),r=selected.set[INDEX[n]],fragment=document.createDocumentFragment();
+ const n=sheetName(state.action,state.dir),r=runFor(selected,n),fragment=document.createDocumentFragment();
  const timings=measureTimings(selected.set,louie,options());
  for(let f=0;f<r.n;f++){
   const b=document.createElement('button'),c=document.createElement('canvas'),t=document.createElement('span');c.width=112;c.height=128;drawRuns(r,f,c,{crop:true});t.textContent=`#${f} · ${timings.static?(f===0?'estático':'não usado'):timings.frames[f]+' ms'}`;b.append(c,t);b.onclick=()=>seek(f);b.dataset.frame=f;fragment.append(b);
@@ -93,11 +107,11 @@ function buildFilmstrip(){
 function seek(f){state.playing=false;$('play').textContent='Reproduzir';engine.seek(f);refEngine?.seek(Math.min(f,refEngine.frames()-1));$('scrub').value=f;draw();}
 function draw(){
  if(!engine)return;const opts={effects:$('effects').checked,guides:$('guides').checked,safeArea:$('safe-area').checked,zoom:+$('zoom').value};paint(engine,$('sprite'),opts);
- const c=engine.current(),r=selected.set[INDEX[c.name]],box=bbox(r,c.frame);$('frame-info').textContent=`${c.name}.gra · quadro${c.frame}/${r.n-1} · ${engine.ms}ms${engine.done?' · ação concluída':''}\ncaixa: ${box?.join(', ')||'vazio'}${box?' · '+(box[2]-box[0])+'×'+(box[3]-box[1])+'px':''}`;
+ const c=engine.current(),r=runFor(selected,c.name),box=bbox(r,c.frame);$('frame-info').textContent=`${c.name}.gra · quadro${c.frame}/${r.n-1} · ${engine.ms}ms${engine.done?' · ação concluída':''}\ncaixa: ${box?.join(', ')||'vazio'}${box?' · '+(box[2]-box[0])+'×'+(box[3]-box[1])+'px':''}`;
  showAnimation('lab',c.name+'.gra');
  $('scrub-label').value=`${engine.p.frame} / ${engine.frames()-1}`;
  if(state.playing)$('scrub').value=Math.min(engine.frames()-1,engine.p.frame);
- $('reference-stage').hidden=!$('compare').checked;
+ $('reference-stage').hidden=!$('compare').checked||!refEngine;
  if(refEngine&&$('compare').checked){paint(refEngine,$('reference-canvas'),opts);const rc=refEngine.current();$('reference-info').textContent=`${reference.name} · ${rc.name}.gra · quadro${rc.frame} · ${refEngine.ms}ms`;}
  const key=c.name+':'+c.frame;if(key!==seenFrame){$('filmstrip').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',+b.dataset.frame===c.frame));seenFrame=key;}
 }
@@ -119,9 +133,9 @@ function frame(now){
 document.addEventListener('visibilitychange',()=>{last=0;acc=0;});
 function renderValidation(){
  if(!report)return;const issues=report.issues,errors=issues.filter(i=>i.level==='error').length,warnings=issues.filter(i=>i.level==='warning').length;
- $('validation-summary').replaceChildren(...[`${report.files}/37 folhas`,`${report.frames} quadros`,`${errors} erros`,`${warnings} avisos`].map((s,i)=>{const e=document.createElement('span');e.className='tag '+(i===2&&errors?'error':i===3&&warnings?'warning':'ok');e.textContent=s;return e;}));
+ $('validation-summary').replaceChildren(...[`${report.files} folhas GRA`,`${report.frames} quadros`,`${errors} erros`,`${warnings} avisos`].map((s,i)=>{const e=document.createElement('span');e.className='tag '+(i===2&&errors?'error':i===3&&warnings?'warning':'ok');e.textContent=s;return e;}));
  $('issues').replaceChildren(...issues.map(i=>{const d=document.createElement('div');d.className='issue '+i.level;d.textContent=`${i.file||''}: ${i.text}`;return d;}));
- $('sheet-table').replaceChildren(...NAMES.map(n=>{const s=report.sheets[n],tr=document.createElement('tr');const values=[n+'.gra',s?.frames??'—',s?`${s.w}×${s.h}`:'—',s?.boxes?.[0]?.join(', ')||'—',s?(s.issues.length?'Conferir':'Lido'):'Ausente / inválido'];for(const v of values){const td=document.createElement('td');td.textContent=v;tr.append(td);}tr.onclick=()=>{const i=NAMES.indexOf(n);state.action=n.startsWith('rui_mo')?'rui_mo':n.startsWith('rui_st')?'rui_st':n.startsWith('msb_ch')?'msb_ch':n.split('_')[0];if(i<20)state.dir=i%4;else if(i>=23&&i<=34)state.dir=(i-23)%4;$('action').value=state.action;setView('lab');resetLab();};return tr;}));
+ $('sheet-table').replaceChildren(...[...NAMES,...(report.extras||[])].map(n=>{const s=report.sheets[n],tr=document.createElement('tr');const values=[n+'.gra',s?.frames??'—',s?`${s.w}×${s.h}`:'—',s?.boxes?.[0]?.join(', ')||'—',s?(s.issues.length?'Conferir':'Lido'):report.fallbacks?.[n]?'Ausente · usa '+report.fallbacks[n]+'.gra':'Ausente / inválido'];for(const v of values){const td=document.createElement('td');td.textContent=v;tr.append(td);}tr.onclick=()=>{const i=NAMES.indexOf(n);state.action=i<0?'extra:'+n:n.startsWith('rui_mo')?'rui_mo':n.startsWith('rui_st')?'rui_st':n.startsWith('msb_ch')?'msb_ch':n.split('_')[0];if(i>=0&&i<20)state.dir=i%4;else if(i>=23&&i<=34)state.dir=(i-23)%4;$('action').value=state.action;setView('lab');resetLab();};return tr;}));
 }
 function drawSeam(now=0){
  if(!selected)return;const [l,r]=$('seam').value.split(',').map(s=>{const [n,f]=s.split(':');const run=selected.set[INDEX[n]];return {n,run,f:+f<0?run.n+(+f):+f};});
@@ -167,6 +181,7 @@ let walkTimer,walkInput;
 function stopForcedWalk(){clearTimeout(walkTimer);if(walkInput)for(const a of ['down','left','up','right'])walkInput.let(a,'lab-walk');walkInput=null;}
 function stopTraining(){stopForcedWalk();if(match){match.stop();match=null;training=null;postResults();}$('training-status').textContent='Treino encerrado.';status('Treino encerrado. O laboratório de animações está disponível.');stopAll();}
 function diagnostic(kind){
+ const required={idle:'st',walk:'mo',stun:'pa',throw:'th',punch:'pu',death:'dd',victory:'wi',entry:'wa',mount:'rui_st','ride-walk':'rui_mo',cart:'msb_ch'}[kind];if(required&&!hasAction(required,+$('training-dir').value))return status('Esta pasta não contém '+sheetName(required,+$('training-dir').value)+'.gra; ação indisponível.');
  if(!match)return status('Inicie o treino primeiro.');if(!match.loaded||!match.world?.me)return status('Aguarde o carregamento do treino.');stopForcedWalk();match.labVictory=false;const p=match.world.me;const dir=+$('training-dir').value;p.dir=dir;
  state.diagnostics.push({type:'forced-state',action:kind,character:selected.name,date:new Date().toISOString()});
  if(kind==='entry'){match.phase=0;match.hud.resetRound();for(const actor of match.world.players){actor.resetStats(match.mapSet);actor.spawnAt(actor.tx,actor.ty);if(training.full)actor.fullItems();}match.world.roundStart();match.setScene(5);}
@@ -198,14 +213,14 @@ function diagnostic(kind){
 }
 async function importFiles(list){
  if(!list.length)return;status('Lendo e validando arquivos neste navegador…');$('choose-files').disabled=$('choose-folder').disabled=true;
- try{const entry=await importPack(list);register(entry);$('character').value=entry.id;await selectCharacter(entry.id);}finally{$('choose-files').disabled=$('choose-folder').disabled=false;$('files').value=$('folder').value='';}
+ try{const entries=await importPacks(list);for(const entry of entries)register(entry);$('character').value=entries[0].id;await selectCharacter(entries[0].id);if(entries.length>1)status(entries.length+' personagens importados. Escolha em Personagem em teste. Arquivos permanecem nesta aba.');}finally{$('choose-files').disabled=$('choose-folder').disabled=false;$('files').value=$('folder').value='';}
 }
 function download(name,data){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function postResults(){return Promise.resolve();} // Reports stay in this tab; explicit download only.
 async function browserSelfTest(){
- const tests=[];for(const action of ['st','mo','th','pu','pa','dd','wi','wa','rui_st','rui_mo','msb_ch','preview','face']){
-  const dirs=['dd','wi','wa','preview','face'].includes(action)?[0]:[0,1,2,3];
-  for(const dir of dirs){const e=new LabEngine(selected.set,louie,{...options(),action,dir});const canvas=document.createElement('canvas');canvas.width=canvas.height=256;paint(e,canvas,{guides:false,effects:true,zoom:1});for(let i=0;i<150;i++)e.step();paint(e,canvas,{guides:false,effects:true,zoom:1});tests.push({sheet:sheetName(action,dir),frames:e.frames(),clockAdvanced:true,rendered:true});}
+ const tests=[];for(const action of ['st','mo','th','pu','pa','dd','wi','wa','rui_st','rui_mo','msb_ch','preview','face',...(report.extras||[]).map(n=>'extra:'+n)]){
+  const dirs=action.startsWith('extra:')||['dd','wi','wa','preview','face'].includes(action)?[0]:[0,1,2,3];
+  for(const dir of dirs){if(!hasAction(action,dir))continue;const e=new LabEngine(selected.set,louie,{...options(),action,dir});const canvas=document.createElement('canvas');canvas.width=canvas.height=256;paint(e,canvas,{guides:false,effects:true,zoom:1});for(let i=0;i<150;i++)e.step();paint(e,canvas,{guides:false,effects:true,zoom:1});tests.push({sheet:sheetName(action,dir),frames:e.frames(),clockAdvanced:true,rendered:true});}
  }
  state.diagnostics.push({type:'browser-render-and-clock-smoke',character:selected.name,tests,scope:'Every sheet decoded, rendered with originalFB and clock-stepped. Does not prove visual quality or completed gameplay.'});await postResults();
 }
@@ -219,6 +234,7 @@ function bind(){
  $('character').onchange=()=>selectCharacter($('character').value).catch(error);$('reference').onchange=()=>selectReference().catch(error);
  $('reload').onclick=()=>selectCharacter($('character').value,true).catch(error);
  $('action').onchange=()=>{state.action=$('action').value;resetLab();};$('speed').onchange=()=>{state.speed=+$('speed').value;resetLab();if(match)match.world.me.speedLvl=state.speed;};$('victory-context').onchange=()=>{state.context=$('victory-context').value;resetLab();};$('warp').onchange=()=>{state.warp=$('warp').value;resetLab();};$('mount-color').onchange=()=>{state.mount=+$('mount-color').value;resetLab();if(match&&match.world.me.hasMount)match.world.me.mount=state.mount;};
+ $('training-dir').onchange=syncActions;
  for(const id of ['zoom','guides','safe-area','effects'])$(id).onchange=draw;
  $('compare').onchange=()=>{if($('compare').checked)selectReference().catch(error);else draw();};
  $('play').onclick=()=>{if(engine.done&& !state.playing){engine.restart();refEngine?.restart();acc=0;repeatAt=0;}state.playing=!state.playing;$('play').textContent=state.playing?'Pausar':'Reproduzir';last=0;};$('restart').onclick=resetLab;
