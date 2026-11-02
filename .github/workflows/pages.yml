@@ -26,6 +26,7 @@ jobs:
           node-version: '22'
       - run: node testar_importacao.mjs
       - run: node testar_hd.mjs
+      - run: node testar_recursos_treino.mjs
       - run: python build_pages.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

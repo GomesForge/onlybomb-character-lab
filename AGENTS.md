@@ -1,3 +1,7 @@
+# Correção de inicialização — 02/11/2026
+
+Falha reproduzida com Hero e HTTP503 injetado em data/map/tile.spr: piso preto, START persistente e rastros de sprites. loadAssets original captura falhas e loadSprite mantém promessa rejeitada em cache; Renderer.still preserva pixels onde piso ausente não pintou. Não alterar esses módulos originais. Adaptador training-assets.mjs confere seis sprites essenciais do mapa, recupera com fetch cache:reload + validação binária e atualiza A.bgs após recuperar fundo. Se HTTP/corrupção persistirem, impedir criação de Match e identificar recurso. Relatório registra checks/recuperações. Botão desabilitado durante início; token cancela início pendente ao encerrar/trocar vista/personagem. testar_recursos_treino.mjs usa sprites reais dos dez mapas e falhas de transporte/corrupção injetadas; executar no CI também. Não confundir este defeito do cenário com arte de GRA.
+
 # Importação vigente — 02/11/2026
 
 Pedido: aceitar todos os personagens de TODOS_OS_PERSONAGENS, com ou sem JSON. Importação em lote por pasta/ZIP, separada por personagem; ARQUIVOS_DO_JOGO, ARQUIVOS_GRA e IMPORTAR_EDITOR normalizados. JSON é opcional; divergências viram avisos, nunca substituem o GRA binário. Recomendações de criação/upload são avisos separados da validade binária. Manter erros de assinatura, offsets, truncamento, RLE fora do canvas e limites de memória. Runs de tamanho zero são quadros vazios válidos no cliente original (Bomberking).

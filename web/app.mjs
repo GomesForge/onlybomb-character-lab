@@ -1,4 +1,4 @@
-import { loadAssets } from './js/game/assets.js';
+import { A, loadAssets } from './js/game/assets.js';
 import { CHARACTERS, CHARACTER_COUNT, characterSet, louieSets } from './js/game/characters.js';
 import { importPacks } from './pack.mjs?v=20261102-kit1';
 import { Sprite } from './js/assets/spr.js';
@@ -12,11 +12,12 @@ import { W, H } from './js/game/mapdata.js';
 import { LabEngine, paint, drawRuns, bbox, measureTimings, DIRS, NAMES, INDEX, sheetName, WALK_MS } from './engine.mjs?v=20261102-kit1';
 import { AnimationTrace, playerSheet } from './animation-trace.mjs';
 import { attachLocalHd } from './hd-local.mjs';
+import { ensureTrainingAssets } from './training-assets.mjs?v=20261102-floor1';
 import { HD_STATE } from './js/game/fb565.js';
 const $=id=>document.getElementById(id);
 const state={view:'lab',action:'st',dir:0,speed:4,context:'round',warp:'entry',mount:0,playing:true,ready:false,epoch:0,diagnostics:[],errors:[]};
 const library=new Map();let selected,reference,engine,refEngine,louie,match,training,report,last=0,acc=0,repeatAt=0,seenFrame='';
-let resources;const empty=new Runs([new Int32Array()],new Uint16Array(),256,256);
+let resources,trainingAttempt=0;const empty=new Runs([new Int32Array()],new Uint16Array(),256,256);
 const animationTraces={lab:new AnimationTrace(),training:new AnimationTrace()};
 function showAnimation(scope,file){
  if(selected&&!selected.native&&file){const name=file.replace(/\.gra$/,'');if(!report.sheets[name]){const source=report.fallbacks?.[name];file=source?source+'.gra ('+name+'.gra ausente)':file+' (ausente)';}}
@@ -163,23 +164,31 @@ function changeTrainingFilter(){
 }
 async function startTraining(){
  if(!selected||!report.valid)return;stopTraining();status('Carregando arena do cliente original…');
+ const attempt=trainingAttempt,entry=selected,map=+$('map').value;$('start-training').disabled=true;
+ try{
+  await ensureResources();
+  const checked=await ensureTrainingAssets({assets:A,map,decode:(path,bytes)=>Runs.fromSprite(new Sprite(path,bytes.slice().buffer)),onRecovery:file=>state.diagnostics.push({type:'training-asset-recovered',file})});
+  if(attempt!==trainingAttempt||selected!==entry||state.view!=='training')return;
+  state.diagnostics.push({type:'training-assets-checked',map,files:checked});
  animationTraces.training.reset();$('training-previous-file').textContent=$('training-current-file').textContent='—';
  display.sideArt=false;display.lite=false;display.smooth=$('fluid-motion').checked;display.filter=$('render-filter').value;settings.bgm=settings.sfx=$('audio').checked;
  const s={myId:1,users:new Map([[1,{nick:'TesteLocal',cls:0}]]),outfit:{wearing:false,look:selected.look},wallet:{bomb:0},belts:[],beltOf:()=>0,superBroadcast:null};
- training=new Training(s,{map:+$('map').value,bots:+$('bots').value,blocks:$('blocks').checked,full:true,items:8191});
+ training=new Training(s,{map,bots:+$('bots').value,blocks:$('blocks').checked,full:true,items:8191});
  match=new Match(training.sessionFor(),$('game-canvas'),null);training.onEnd=()=>{stopTraining();status('Treino encerrado.');};
  const instance=match;
- try{await instance.start();if(match!==instance||instance.stopped)return;match.world.me.set=selected.set;match.world.me.speedLvl=state.speed;state.diagnostics.push({type:'training-start',character:selected.name,map:+$('map').value,bots:+$('bots').value,date:new Date().toISOString()});
+ await instance.start();if(match!==instance||instance.stopped)return;match.world.me.set=selected.set;match.world.me.speedLvl=state.speed;state.diagnostics.push({type:'training-start',character:selected.name,map,bots:+$('bots').value,date:new Date().toISOString()});
   // Observe requests and states without changing their handling or their clocks.
   const send=training.conn.sendGame.bind(training.conn);training.conn.sendGame=raw=>{state.diagnostics.push({type:'training-request',opcode:raw[0],ms:instance.world.clock});send(raw);postResults();};
   const update=instance.update.bind(instance);let lastSample=0;
   instance.update=dt=>{update(dt);showAnimation('training',playerSheet(instance.world.me));if(instance.world.clock-lastSample>=200){lastSample=instance.world.clock;const p=instance.world.me;state.diagnostics.push({type:'training-sample',ms:lastSample,state:p.state,frame:p.frame,dir:p.dir,sheet:playerSheet(p),tile:[p.tx,p.ty],bombs:instance.world.bombs.length});if(state.diagnostics.length>1500)state.diagnostics.splice(0,1);}};
   const nextRound=instance.nextRound.bind(instance);instance.nextRound=(...args)=>{if(instance.labVictory){instance.labVictory=false;setTimeout(()=>{if(match===instance)diagnostic('reset');},0);return;}nextRound(...args);};
-  fitTrainingCanvas();$('game-canvas').focus();status('Treino ativo. Clique na arena e use as setas, espaço e Z.');postResults();}catch(e){if(match===instance)stopTraining();throw e;}
+  fitTrainingCanvas();$('game-canvas').focus();status('Treino ativo. Clique na arena e use as setas, espaço e Z.');postResults();
+ }catch(e){if(attempt===trainingAttempt)stopTraining();throw e;}
+ finally{if(attempt===trainingAttempt)$('start-training').disabled=false;}
 }
 let walkTimer,walkInput;
 function stopForcedWalk(){clearTimeout(walkTimer);if(walkInput)for(const a of ['down','left','up','right'])walkInput.let(a,'lab-walk');walkInput=null;}
-function stopTraining(){stopForcedWalk();if(match){match.stop();match=null;training=null;postResults();}$('training-status').textContent='Treino encerrado.';status('Treino encerrado. O laboratório de animações está disponível.');stopAll();}
+function stopTraining(){trainingAttempt++;stopForcedWalk();if(match){match.stop();match=null;training=null;postResults();}$('start-training').disabled=!selected||!report?.valid;$('training-status').textContent='Treino encerrado.';status('Treino encerrado. O laboratório de animações está disponível.');stopAll();}
 function diagnostic(kind){
  const required={idle:'st',walk:'mo',stun:'pa',throw:'th',punch:'pu',death:'dd',victory:'wi',entry:'wa',mount:'rui_st','ride-walk':'rui_mo',cart:'msb_ch'}[kind];if(required&&!hasAction(required,+$('training-dir').value))return status('Esta pasta não contém '+sheetName(required,+$('training-dir').value)+'.gra; ação indisponível.');
  if(!match)return status('Inicie o treino primeiro.');if(!match.loaded||!match.world?.me)return status('Aguarde o carregamento do treino.');stopForcedWalk();match.labVictory=false;const p=match.world.me;const dir=+$('training-dir').value;p.dir=dir;

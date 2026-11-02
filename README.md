@@ -4,6 +4,8 @@
 
 Ferramenta interna deste projeto para importar, inspecionar e testar personagens. Publicada no GitHub Pages. Não é uma ferramenta oficial da Hudson ou da equipe do servidor.
 
+Antes de iniciar o treino, o laboratório verifica piso, blocos, sombras e fundo do mapa. Recursos ausentes são baixados novamente, contornando falhas de carregamento em cache. Se continuarem indisponíveis ou corrompidos, o treino não inicia e identifica o arquivo; isso evita arena preta e rastros de quadros anteriores. A recuperação é registrada no relatório local. Regressão: `node testar_recursos_treino.mjs`.
+
 ## Uso
 
 1. A página sempre abre **sem personagem**. Importe uma pasta, ZIP ou GRA soltos, **com ou sem `character.json`**. Pode selecionar a coleção `TODOS_OS_PERSONAGENS`: cada subpasta vira um personagem na lista.
